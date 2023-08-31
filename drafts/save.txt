@@ -1,0 +1,435 @@
+// import {
+//   checkState,
+//   getObjectKeysAsType,
+//   populateCommonOptions
+// } from "../src/helpers";
+// import { InputStateType, InputType } from "../src/types";
+// import { UtilError } from "../src/helpers/error";
+//
+// /**
+//  * Get object with autocomplete
+//  * @param obj
+//  * @param firstKey
+//  * @description Take any object as param, take firstKey which inherits obj key
+//  * and return an object with firstkey as key with autocomplete
+//  * @author Arnaud LITAABA
+//  */
+// // Take an object and return an object with key as given key plus autocompletition
+// export const getObjectWithAutoComplete = <Obj, FirstKey extends keyof Obj>(
+//   obj: Obj,
+//   firstKey: FirstKey
+// ) => {
+//   return {
+//     [firstKey]: "56"
+//   } as { [key in FirstKey]: string };
+// };
+//
+// /**
+//  * Get object with autocomplete with string params
+//  * @param keys
+//  * @description Take many keys, take firstKey which inherits string | number | symbol
+//  * and return an object with firstkey as key with autocomplete
+//  * @author Arnaud LITAABA
+//  */
+// export const getObjectWithAutoCompleteOnString = <
+//   FirstKey extends string | number | symbol
+// >(
+//   keys: FirstKey[]
+// ) => {
+//   let res = {} as { [key in FirstKey]: string };
+//
+//   keys.forEach((key) => {
+//     res = {
+//       ...res,
+//       [key]: {
+//         target: key,
+//         value: "",
+//         valid: false,
+//         touched: false
+//       }
+//     };
+//   });
+//
+//   return res;
+// };
+//
+// // eslint-disable-next-line @typescript-eslint/no-unused-vars
+// const t = (entry: { [key in string]: string }, key: keyof typeof entry) => {
+//   // console.log(entry[key]);
+// };
+//
+// // eslint-disable-next-line @typescript-eslint/no-unused-vars
+// function createState<Obj extends InputType, key extends keyof Obj>(state: Obj) {
+//   let res = {} as { [k in key]: InputStateType };
+//
+//   checkState(state);
+//
+//   getObjectKeysAsType(state).forEach((key) => {
+//     res = {
+//       ...res,
+//       [key]: {
+//         target: key,
+//         ...populateCommonOptions(state[key].validation),
+//         ...state[key]
+//       }
+//     };
+//   });
+//   // we keep ...res to make autocomplete available to user
+//   return {
+//     ...res,
+//     ...handleMatchValidation(res)
+//   };
+// }
+//
+// // eslint-disable-next-line @typescript-eslint/no-unused-vars
+// function handleMatchValidation(state: InputType) {
+//   const mappedState: InputType = { ...state };
+//
+//   for (const stateKey in mappedState) {
+//     //We actually are on ONE Input Section for example: confirmPassword
+//     if (stateKey in mappedState) {
+//       /* we get the key to match with, we are trying to see
+//        for example if confirmPassword want to match its validation to some key
+//       */
+//       const matchKey = mappedState[stateKey].validation?.match as string;
+//       /* we check if validation and key to match exist else we throw error
+//        * For example, we check if state.confirmPassword.validation exists, and we check if matchKey
+//        * state.confirmPassword.validation.match exists
+//        */
+//       if (mappedState[stateKey].validation && matchKey) {
+//         if (!(matchKey in mappedState)) {
+//           throw UtilError({
+//             name: "Index Error",
+//             message: `'${matchKey}' does not exist in your state key`,
+//             stack: `${stateKey}.validation.match = ${matchKey}`,
+//             state
+//           });
+//         }
+//
+//         /* we merge current input section (confirmPassword) validation who already have the match key
+//          * with the matched input section validation (password) because the matchKey is password
+//          * Since state[stateKey which is confirmPassword].validation.matchKey = password, there is no need to add it again
+//          * For example: we copy all property from password validation to confirmPassword validation because confirmPassword validation
+//          * match with password validation. Remember stateKey is confirmPassword amd matchedKey is password
+//          */
+//         mappedState[stateKey] = {
+//           ...mappedState[stateKey],
+//           validation: {
+//             ...mappedState[matchKey].validation,
+//             ...mappedState[stateKey].validation
+//           }
+//         };
+//         /* We add a new match key to input section who is the matched one and the match is the key of current input section
+//          * For example, we copy validation from password to confirmPassword. Perfect, now we need to add th match property to
+//          * password also. So password can match in return confirmPassword.
+//          * Remember stateKey is confirmPassword amd matchedKey is password
+//          */
+//         mappedState[matchKey] = {
+//           ...mappedState[matchKey],
+//           validation: {
+//             ...mappedState[matchKey].validation,
+//             match: stateKey
+//           }
+//         };
+//       }
+//     }
+//   }
+//   return { ...mappedState };
+// }
+
+// import { ArrayInputStateType, Dispatch, SetStateAction, ValuesType } from "../src/types";
+// import { UtilError } from "../src/helpers/error";
+// import { checkStateInput, checkStateProperty, initialArrayCheck, populateCommonOptions } from "../src/helpers/tools";
+//
+// function withArrayInputs<Obj extends ArrayInputStateType[]>([state, setState]: [
+//   Obj,
+//   Dispatch<SetStateAction<Obj>>
+// ]) {
+//   if (state?.constructor.name !== "Array") {
+//     throw UtilError({
+//       name: "StateError",
+//       message: "The state is not an array",
+//       state
+//     });
+//   }
+//   const res: ArrayInputStateType[] = [];
+//
+//   state.forEach((s) => {
+//     initialArrayCheck(s);
+//     checkStateProperty(s, s);
+//     checkStateInput(s);
+//     res.push({ ...populateCommonOptions(), ...s });
+//   });
+//
+//   // res = checkArrayMatchState(res);
+//
+//   function stateChange(target: string | undefined, value: ValuesType) {
+//     return; //onObjectStateChange(target, value, setState);
+//   }
+//
+//   return [res, stateChange] as [ArrayInputStateType[], typeof stateChange];
+// }
+
+//matchInputValidation
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// function likeInputValidation(
+//   state: InputType,
+//   target: string,
+//   matchKey: string
+// ) {
+//   checkIfMatchKeyExists(state, target, matchKey);
+//   /*
+//    * We create a match result with default value.
+//    * all matchKeys = [], lastMatched = current matchKey
+//    * validation: current MatchKey validation
+//    * */
+//   let matchResult: MatchResultType = {
+//     matchKeys: [],
+//     lastMatched: matchKey,
+//     validation: state[matchKey].validation
+//   };
+//
+//   /*
+//    * We check if the matched input also match someone until find the last one who does have a match property
+//    * and use last not matched validation to match all input in the hierarchy.
+//    * We add trackingMatch for validation tool. See Class validation in ../validation.CheckMatch()
+//    * */
+//   try {
+//     const checkDeepMatch = new CheckDeepMatch(state);
+//     checkDeepMatch.startMatching(matchKey);
+//     matchResult = checkDeepMatch.result;
+//   } catch (_) {
+//     throw UtilError({
+//       name: "Matching Error",
+//       message: `It seems that we have infinite match here. Please make sure Input does not match each other and the last matched input does not match anyone`,
+//       state: state
+//     });
+//   }
+//
+//   /*
+//    * For every matched key , We set two properties.
+//    * - lastMatched input validation
+//    * - trackingMatching.
+//    * The input validation is the validation defined by the user (We just want to keep the match key of the user)
+//    * We add our result validation and for trackMatching, we put the current target,
+//    * all matchKeys found without the value itself and the last matched.
+//    * For example. if name match firstname and firstname match username and username match something,
+//    * the result of the matchKeys on target name are ["firstname", "username"] and lastMatched is something.
+//    * We loop through the result and set trackMatching to ["name",custom,"something"]
+//    * custom  = username if one of the result is firstname and firstname the one the result if username.
+//    * We don't want an input to match himself
+//    * */
+//   matchResult.matchKeys.forEach((v) => {
+//     state[v].validation = {
+//       ...state[v].validation,
+//       ...matchResult.validation,
+//       trackingMatch: setTrackingMatching(state[v], [
+//         target,
+//         ...matchResult.matchKeys.filter((v) => v !== v),
+//         matchResult.lastMatched
+//       ])
+//     };
+//   });
+//
+//   /*
+//    * trackMatching for the target itself is the result and the last matched
+//    * ["firstname","username","something"]
+//    * */
+//   state[target].validation = {
+//     ...matchResult.validation,
+//     match: matchKey,
+//     trackingMatch: setTrackingMatching(state[target], [
+//       ...matchResult.matchKeys,
+//       matchResult.lastMatched
+//     ])
+//   };
+//
+//   /*
+//    * trackMatching for the lastMatched is the target and result
+//    * ["name","firstname","username"]
+//    * */
+//   state[matchResult.lastMatched].validation = {
+//     ...matchResult.validation,
+//     trackingMatch: setTrackingMatching(state[matchResult.lastMatched], [
+//       target,
+//       ...matchResult.matchKeys
+//     ])
+//   };
+//
+//   return state;
+// }
+
+// function withArrayInputs<Obj extends ArrayInputStateType[]>([
+//   defaultState,
+//   defaultSetState
+// ]: [Obj, Dispatch<SetStateAction<Obj>>]) {
+//   checkStateArrayAndInputObjectAndTargetValid(defaultState);
+//
+//   let state: ArrayInputStateType[] = [];
+//
+//   defaultState.forEach((s) => {
+//     state.push({ ...populateCommonOptions(s.validation), ...s });
+//   });
+//
+//   // this need to be done after populate or after set things up
+//   const validateState = checkMatchValidationAndAllProperties(
+//     inputArrayToObject(state)
+//   );
+//
+//   state = inputObjectToArray(validateState);
+//
+//   function setState(index: number, value: ValuesType) {
+//     return onArrayStateChange(index, value, defaultSetState);
+//   }
+//
+//   return [state, setState] as [ArrayInputStateType[], typeof setState];
+// }
+
+// /**
+//  * @name withObjectInputs
+//  * @param defaultState
+//  * @param defaultSetState
+//  * @param as
+//  * @description Create a generic type Obj and key type.
+//  * Extends it types with Input types and extends key type with the keyof the Obj previously created.
+//  * Pass the type Obj to the param state.
+//  * Create the output res as an array of object cast as {[key in "user key typed when calling the function"]: InputStateType}
+//  * and setState which will update the state
+//  * Call the helper getObjectKeysAsType which return all key of object as type and for each key we populate the res,
+//  * therefore we have autocomplete based on user key
+//  * @author Arnaud LITAABA
+//  */
+// function withObjectInputs<Obj extends InputType, key extends keyof Obj>([
+//   defaultState,
+//   defaultSetState
+// ]: [Obj, Dispatch<SetStateAction<Obj>>]) {
+//   checkStateObjectAndTargetUndefinedOrValid(defaultState);
+//
+//   let state = {} as { [k in key]: ObjectInputStateType };
+//
+//   getObjectKeysAsType(defaultState).forEach((key) => {
+//     state = {
+//       ...state,
+//       [key]: {
+//         ...populateCommonOptions(defaultState[key].validation),
+//         ...defaultState[key],
+//         target: key
+//       }
+//     };
+//   });
+//
+//   // this need to be done after populate or after set things up
+//   const validatedState = checkMatchValidationAndAllProperties(state);
+//
+//   function setState(target: string | undefined, value: ValuesType) {
+//     return onObjectStateChange(target, value, defaultSetState);
+//   }
+//
+//   // we keep ...state to make autocomplete available to user
+//   return [{ ...state, ...validatedState }, setState] as [
+//     { [k in key]: ObjectInputStateType },
+//     typeof setState
+//   ];
+// }
+
+// function initValidAndTouch(entry: ObjectInputStateType | ArrayInputStateType) {
+//   const validation = entry.validation;
+//   const value = entry.value;
+//   if (typeof validation === "undefined") {
+//     return true;
+//   }
+//   if (Object.keys(validation).length <= 0) {
+//     return true;
+//   }
+//   return !["", 0, null, undefined].includes(value);
+// }
+
+// function onObjectStateChange<Obj extends InputObjectWithFormIsValid>(
+//   target: string | undefined,
+//   value: ValuesType,
+//   setState: Dispatch<SetStateAction<Obj>>
+// ) {
+//   setState((prevState: Obj) => {
+//     if (
+//       typeof target === "string" &&
+//       typeof prevState.inputs[target] !== "undefined"
+//     ) {
+//       const clonedData = { ...prevState.inputs };
+//       const inputEl = {
+//         ...clonedData[target as string]
+//       };
+//       inputEl.value = value;
+//       inputEl.touched = true;
+//       const { validatedData, valid, errorMessage } = validate(
+//         clonedData,
+//         target as string,
+//         value
+//       );
+//       inputEl.valid = valid;
+//       inputEl.errorMessage = errorMessage;
+//       const updatedState = {
+//         ...validatedData,
+//         [target as string]: { ...inputEl }
+//       };
+//       const formIsValid = stateIsValid(updatedState);
+//       return {
+//         inputs: updatedState,
+//         formIsValid
+//       } as Obj;
+//     }
+//     throw UtilError({
+//       name: "State update Error",
+//       message: `The target '${target}' is not present in the state`
+//     });
+//   });
+//   return;
+// }
+
+// function onArrayStateChange<Obj extends InputArrayWithFormIsValid>(
+//   index: number,
+//   value: ValuesType,
+//   setState: Dispatch<SetStateAction<Obj>>
+// ) {
+//   if ((typeof index as unknown) !== "number") {
+//     throw UtilError({
+//       name: "State update Error",
+//       message: "Index is not a number",
+//       stack: `${index}`
+//     });
+//   }
+//   setState((prevState: Obj) => {
+//     if (typeof prevState.inputs[index] === "undefined") {
+//       throw UtilError({
+//         name: "State update Error",
+//         message: `Wrong index provided '${index}'`,
+//         stack: `'${index}'`
+//       });
+//     }
+//     const clonedData = [...prevState.inputs];
+//     const inputEl = clonedData[index];
+//     inputEl.value = value;
+//     inputEl.touched = true;
+//     const { validatedData, valid, errorMessage } = validate(
+//       inputArrayToObject(clonedData),
+//       inputEl.target,
+//       value
+//     );
+//     inputEl.valid = valid;
+//     inputEl.errorMessage = errorMessage;
+//     const result = inputObjectToArray(validatedData);
+//     result[index] = inputEl;
+//     const formIsValid = stateIsValid(validatedData);
+//     return { inputs: result, formIsValid } as Obj;
+//   });
+// }
+
+// /**
+//  * Get object key as type
+//  * @param obj
+//  * @description Take any object as param and return an array of it's key
+//  * Thoses keys can be used as type
+//  * @author Arnaud LITAABA
+//  */
+// function getObjectKeysAsType<Obj extends object>(obj: Obj): (keyof Obj)[] {
+//   return Object.keys(obj) as (keyof Obj)[];
+// }
