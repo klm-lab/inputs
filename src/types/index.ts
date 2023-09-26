@@ -1,26 +1,40 @@
+// _ => tell us if a user has a custom error Message
+// __ => help us validate matched keys
+// ___ => help us save original errorMessage
+// key => help us manage and transform state from array to object and so on
+
 type ValuesType = any;
 
-type StateToolsType = {
+interface StateToolsType {
   isValid: boolean;
-  reset: () => void;
+
+  reset(): void;
+}
+
+type ObjType = {
+  [k in string]: string;
 };
-type CustomValidationType = (value: ValuesType) => boolean;
-type InputObjectWithFormIsValid = {
-  inputs: InputType;
-  formIsValid: boolean;
-};
-type InputArrayWithFormIsValid = {
-  inputs: ArrayInputStateType[];
-  formIsValid: boolean;
-};
+
+type CustomValidationType =
+  | ((value: ValuesType) => boolean)
+  | ((
+      value: ValuesType,
+      setErrorMessage: (message: string | ObjType) => void
+    ) => boolean)
+  | ((value: ValuesType) => Promise<boolean>)
+  | ((
+      value: ValuesType,
+      setErrorMessage: (message: string | ObjType) => void
+    ) => Promise<boolean>);
+
 type MatchResultType = {
   matchKeys: string[];
   lastMatched: string;
   validation?: ValidationStateType;
 };
-type ValidationClassResultType = {
+type ValidationResult = {
   valid: boolean;
-  errorMessage: string;
+  errorMessage?: ErrorMessageType;
 };
 type ValidationStateType = {
   required?: boolean;
@@ -39,23 +53,18 @@ type ValidationStateType = {
   regex?: RegExp;
   copy?: string;
   custom?: CustomValidationType;
-  trackingMatch?: string[];
+  __?: string[];
 };
-type KlmUtilConstant = {
-  [key in string]: any;
-};
-type WorkingState = {
-  DEFAULT: string;
-  PROCESSING: string;
-  FAILED: string;
-  SUCCESS: string;
-};
-type ValidationResultType = {
-  validatedData: InputType;
-  valid: boolean;
-  errorMessage: string;
-};
-interface commonInputState {
+
+type ErrorMessageType =
+  | string
+  | {
+      [k in string]: string;
+    };
+
+interface Input {
+  id?: string;
+  name?: string;
   type?: string;
   label?: string;
   value?: ValuesType;
@@ -63,44 +72,44 @@ interface commonInputState {
   valid?: boolean;
   touched?: boolean;
   placeholder?: string;
-  errorMessage?: string;
-  generateErrorMessage?: boolean;
+  errorMessage?: ErrorMessageType;
+  _?: boolean;
+  ___?: ErrorMessageType;
+  key?: string;
   validation?: ValidationStateType;
+  validating?: boolean;
 }
-interface ArrayInputStateType extends commonInputState {
-  target: string;
-}
-interface ObjectInputStateType extends commonInputState {
-  target?: string;
-}
-type InputType = {
-  [key in string]: ObjectInputStateType;
+
+type ObjState = {
+  [key in string]: Input;
 };
-type Dispatch<A> = (value: A) => void;
-type SetStateAction<S> = S | ((prevState: S) => S);
-type ErrorType = {
-  name: string;
-  message: string;
-  stack?: string;
-  matchKey?: string;
-  state?: any;
-};
+
+type ObjStateOutput<Key> = [
+  { [k in Key & string]: Input },
+  (input: Input, value: any) => void,
+  StateToolsType
+];
+type StringStateOutput = [Input, (value: any) => void, StateToolsType];
+type ArrayStateOutput = [
+  Input[],
+  (input: Input, value: any) => void,
+  StateToolsType
+];
+
+type StateType = "object" | "array";
+
 export type {
-  ObjectInputStateType,
+  ObjStateOutput,
+  ArrayStateOutput,
+  StringStateOutput,
+  Input,
   ValuesType,
   ValidationStateType,
-  InputType,
-  Dispatch,
-  SetStateAction,
-  ValidationResultType,
-  ErrorType,
-  KlmUtilConstant,
-  WorkingState,
+  ObjState,
+  StateType,
   CustomValidationType,
-  ArrayInputStateType,
   MatchResultType,
-  ValidationClassResultType,
-  InputArrayWithFormIsValid,
-  InputObjectWithFormIsValid,
-  StateToolsType
+  ValidationResult,
+  StateToolsType,
+  ObjType
 };

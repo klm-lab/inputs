@@ -1,299 +1,136 @@
 import type {
-  ArrayInputStateType,
-  Dispatch,
-  InputArrayWithFormIsValid,
-  InputObjectWithFormIsValid,
-  InputType,
-  ObjectInputStateType,
-  SetStateAction,
-  StateToolsType,
-  ValuesType
+  ObjState,
+  StateType,
+  ValuesType,
+  ObjStateOutput,
+  ArrayStateOutput,
+  StringStateOutput,
+  Input
 } from "./types";
 import {
-  _checkFirstStateRoot,
-  _verifiedArrayState,
-  _verifiedObjectState,
-  commonProperties,
-  inputArrayToObject,
-  inputObjectToArray,
-  matchRulesAndCheckProperties,
-  resetArrayState,
-  resetObjectState,
-  stateIsValid,
-  validate
-} from "./helpers/tools";
-import { _UtilError } from "./helpers/error";
-import { useCallback, useEffect, useMemo, useState } from "react";
+  common,
+  transform,
+  matchRules,
+  resetState,
+  stateIsValid
+} from "./util";
+import { validate } from "./validation";
+import { useCallback, useMemo, useState } from "react";
 
-function verifiedAndPatchObjectInputs(
-  initialState: InputType
-): [InputType, boolean] {
-  process.env.NODE_ENV !== "production" && _verifiedObjectState(initialState);
-  let finalInputs = {} as InputType;
-  Object.keys(initialState).forEach((key) => {
-    finalInputs = {
-      ...finalInputs,
-      [key]: {
-        ...commonProperties(initialState[key]),
-        ...initialState[key],
-        target: key
-      }
+const populate = (state: any, type: StateType): any => {
+  const final = {} as ObjState;
+  for (const stateKey in state) {
+    const parseKey = type === "object" ? stateKey : state[stateKey].id;
+    final[parseKey] = {
+      ...common(state[stateKey]),
+      ...state[stateKey],
+      ...(type === "object" ? { id: stateKey } : {})
     };
-  });
-  const validatedState = matchRulesAndCheckProperties(finalInputs);
-  return [validatedState, stateIsValid(validatedState)];
-}
+  }
 
-/**
- * @name reactObjectInputs
- * @param initialState
- * @description Create an object input state.
- * we explicitly define the function return type to avoid breaking autocomplete
- * [{ [k in key]: ObjectInputStateType },(target: string | undefined, value: any) => void,boolean]
- * @author Arnaud LITAABA.
- */
-function reactObjectInputs<Obj extends InputType, key extends keyof Obj>(
-  initialState: Obj
-): [
-  { [k in key]: ObjectInputStateType },
-  (target: string | undefined, value: any) => void,
-  StateToolsType
-] {
-  const [patchedInputs, initialFormIsValid] = useMemo(
-    () => verifiedAndPatchObjectInputs(initialState),
-    []
-  );
+  const s = matchRules(final);
+  return [type === "object" ? s : transform(s, "array"), stateIsValid(s)];
+};
+
+function inputs(initialState: any, type: StateType, selective?: string) {
+  const [entry, valid] = useMemo(() => populate(initialState, type), []);
+
   const [{ inputs, formIsValid }, setInputs] = useState({
-    inputs: patchedInputs,
-    formIsValid: initialFormIsValid
+    inputs: entry,
+    formIsValid: valid
   });
-  const setState = useCallback(function (
-    target: string | undefined,
-    value: ValuesType
-  ) {
-    return onObjectStateChange(target, value, setInputs);
+  const setState = useCallback(function (input: any, value: ValuesType) {
+    return onChange(
+      selective ? inputs[selective] : input,
+      selective ? input : value,
+      setInputs,
+      type
+    );
   }, []);
   const reset = useCallback(function () {
-    setInputs((prevState: InputObjectWithFormIsValid) => {
+    setInputs((prevState: any) => {
       return {
-        inputs: resetObjectState(prevState.inputs),
+        inputs: resetState(prevState.inputs, type),
         formIsValid: false
       };
     });
   }, []);
-  useEffect(() => {
-    process.env.NODE_ENV !== "production" &&
-      setInputs({
-        inputs: patchedInputs,
-        formIsValid: initialFormIsValid
-      });
-  }, []);
+
   return [
-    inputs as { [k in key]: ObjectInputStateType },
+    selective ? inputs[selective] : inputs,
     setState,
-    {
-      isValid: formIsValid,
-      reset
-    }
+    { isValid: formIsValid, reset }
   ];
 }
 
-function verifiedAndPatchArrayInputs(
-  initialState: ArrayInputStateType[]
-): [ArrayInputStateType[], boolean] {
-  process.env.NODE_ENV !== "production" && _verifiedArrayState(initialState);
-  const finalInputs: ArrayInputStateType[] = [];
-  initialState.forEach((s) => {
-    finalInputs.push({ ...commonProperties(s), ...s });
-  });
-  const validatedState = matchRulesAndCheckProperties(
-    inputArrayToObject(finalInputs)
-  );
-  return [inputObjectToArray(validatedState), stateIsValid(validatedState)];
-}
-
-/**
- * @name reactArrayInputs
- * @param initialState
- * @description Create an array input state.
- * we explicitly define the function return type to avoid breaking autocomplete
- * [ArrayInputStateType[],(index: number, value: any) => void,boolean]
- * @author Arnaud LITAABA
- */
-function reactArrayInputs(
-  initialState: ArrayInputStateType[]
-): [
-  ArrayInputStateType[],
-  (index: number, value: any) => void,
-  StateToolsType
-] {
-  const [patchedInputs, initialFormIsValid] = useMemo(
-    () => verifiedAndPatchArrayInputs(initialState),
-    []
-  );
-  const [{ inputs, formIsValid }, setInputs] = useState({
-    inputs: patchedInputs,
-    formIsValid: initialFormIsValid
-  });
-
-  const setState = useCallback(function (index: number, value: ValuesType) {
-    return onArrayStateChange(index, value, setInputs);
-  }, []);
-
-  const reset = useCallback(function () {
-    setInputs((prevState: InputArrayWithFormIsValid) => {
-      return {
-        inputs: resetArrayState(prevState.inputs),
-        formIsValid: false
-      };
-    });
-  }, []);
-  useEffect(() => {
-    process.env.NODE_ENV !== "production" &&
-      setInputs({
-        inputs: patchedInputs,
-        formIsValid: initialFormIsValid
-      });
-  }, []);
-  return [inputs, setState, { isValid: formIsValid, reset }];
-}
-
-/**
- * @name onObjectStateChange
- * @param target
- * @param value
- * @param setState
- * @description Change and validate state
- * @author Arnaud LITAABA
- */
-
-function onObjectStateChange(
-  target: string | undefined,
+async function onChange(
+  input: Input,
   value: ValuesType,
-  setState: Dispatch<SetStateAction<InputObjectWithFormIsValid>>
+  setState: any,
+  type: StateType
 ) {
-  setState((prevState: InputObjectWithFormIsValid) => {
-    if (
-      typeof target === "string" &&
-      typeof prevState.inputs[target] !== "undefined"
-    ) {
-      const clonedData = { ...prevState.inputs };
-      const inputEl = {
-        ...clonedData[target]
-      };
-      inputEl.value = value;
-      inputEl.touched = true;
-      const { validatedData, valid, errorMessage } = validate(
-        clonedData,
-        target,
-        value
-      );
-      inputEl.valid = valid;
-      inputEl.errorMessage = errorMessage;
-      const updatedState = {
-        ...validatedData,
-        [target]: { ...inputEl }
-      };
-      const formIsValid = stateIsValid(updatedState);
-      return {
-        inputs: updatedState,
-        formIsValid
-      };
-    }
-    throw _UtilError({
-      name: "State update Error",
-      message: `The target '${target}' is not present in the state`
-    });
-  });
-  return;
-}
+  let toValidate = {};
 
-/**
- * @name onArrayStateChange
- * @param index
- * @param value
- * @param setState
- * @description Change and validate state
- * @author Arnaud LITAABA
- */
-function onArrayStateChange(
-  index: number,
-  value: ValuesType,
-  setState: Dispatch<SetStateAction<InputArrayWithFormIsValid>>
-) {
-  if ((typeof index as unknown) !== "number") {
-    throw _UtilError({
-      name: "State update Error",
-      message: "Index is not a number",
-      stack: `${index}`
+  async function setValue() {
+    setState((prevState: any) => {
+      const clonedData =
+        type === "object"
+          ? { ...prevState.inputs }
+          : transform(prevState.inputs, "object");
+      clonedData[input.id as string].value = value;
+      clonedData[input.id as string].touched = true;
+      clonedData[input.id as string].validating = true;
+      toValidate = clonedData;
+      return {
+        ...prevState,
+        inputs: type === "object" ? clonedData : transform(clonedData, "array")
+      };
     });
   }
-  setState((prevState: InputArrayWithFormIsValid) => {
-    if (typeof prevState.inputs[index] === "undefined") {
-      throw _UtilError({
-        name: "State update Error",
-        message: `Wrong index provided '${index}'`,
-        stack: `'${index}'`
-      });
-    }
-    const clonedData = [...prevState.inputs];
-    const inputEl = clonedData[index];
-    inputEl.value = value;
-    inputEl.touched = true;
-    const { validatedData, valid, errorMessage } = validate(
-      inputArrayToObject(clonedData),
-      inputEl.target,
-      value
-    );
-    inputEl.valid = valid;
-    inputEl.errorMessage = errorMessage;
-    const result = inputObjectToArray(validatedData);
-    result[index] = inputEl;
+  await setValue();
+  const { validatedData, valid, errorMessage } = await validate(
+    toValidate,
+    input.id as string,
+    value
+  );
+  console.warn(validatedData, valid, input.id);
+  setState(() => {
+    validatedData[input.id as string].valid = valid;
+    validatedData[input.id as string].validating = false;
+    validatedData[input.id as string].errorMessage = errorMessage;
     const formIsValid = stateIsValid(validatedData);
-    return { inputs: result, formIsValid };
+    return {
+      inputs:
+        type === "object" ? validatedData : transform(validatedData, "array"),
+      formIsValid
+    };
   });
 }
 
-function useInputs<Obj extends InputType, key extends keyof Obj>(
-  initialState: Obj
-): [
-  {
-    [k in key]: ObjectInputStateType;
-  },
-  (target: string | undefined, value: any) => void,
-  StateToolsType
-];
-function useInputs(
-  initialState: ArrayInputStateType[]
-): [ArrayInputStateType[], (index: number, value: any) => void, StateToolsType];
-function useInputs(
-  initialState: (string | ArrayInputStateType)[]
-): [ArrayInputStateType[], (index: number, value: any) => void, StateToolsType];
-function useInputs<key extends string>(
-  initialState: key
-): [
-  {
-    [k in key]: ObjectInputStateType;
-  },
-  (target: string | undefined, value: any) => void,
-  StateToolsType
-];
+function useInputs<S extends ObjState>(
+  initialState: S
+): ObjStateOutput<keyof S>;
+function useInputs(initialState: Input[]): ArrayStateOutput;
+function useInputs(initialState: (string | Input)[]): ArrayStateOutput;
+function useInputs(initialState: string): StringStateOutput;
 
-function useInputs(initialState: any) {
-  useMemo(() => {
-    process.env.NODE_ENV !== "production" && _checkFirstStateRoot(initialState);
-  }, []);
+function useInputs(initialState: any): any {
   if (Array.isArray(initialState)) {
-    return reactArrayInputs(
-      initialState.map((target) =>
-        typeof target === "string" ? { target } : target
-      )
+    return inputs(
+      initialState.map((entry, i) =>
+        typeof entry === "string"
+          ? { id: entry }
+          : entry.id
+          ? entry
+          : { id: `input_${i}`, ...entry }
+      ),
+      "array"
     );
   }
   if (typeof initialState === "string") {
-    return reactObjectInputs({ [initialState]: {} });
+    return inputs({ [initialState]: {} }, "object", initialState);
   }
-  return reactObjectInputs(initialState);
+  return inputs(initialState, "object");
 }
 
 export { useInputs };
