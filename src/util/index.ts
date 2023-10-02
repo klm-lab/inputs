@@ -60,7 +60,7 @@ const setTrackingMatching = (entry: Input, matchKey: string[]) => {
 
 // Loop validation
 const lV = (state: ValidationStateType, data: ValidationStateType) => {
-  for (let dataKey in data) {
+  for (const dataKey in data) {
     const key = dataKey as keyof ValidationStateType;
     if (
       state[key] &&
