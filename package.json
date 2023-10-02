@@ -1,24 +1,20 @@
 {
-  "name": "@klm-lab/inputs",
-  "version": "1.0.0",
+  "name": "aio-inputs",
+  "version": "1.1.0",
   "description": "An opinionated inputs state manager for react",
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
   "scripts": {
     "build": "npm ci && npm run build:noci",
     "dev:noci": "npm run lint:prettier && npm run build:webpack && npm run build:dts",
-    "build:noci": "npm run lint:prettier && npm run build:webpack && npm run build:dts",
+    "build:noci": "npm run clean && npm run lint:prettier && npm run build:webpack && npm run build:dts",
     "lint:prettier": "npm run lint && npm run prettier",
     "build:dts": "dts-bundle-generator --config ./dts.json && npm run clean:temp",
-    "build:webpack:dev": "webpack --config webpack.config.dev.js",
-    "build:webpack:dev-w": "webpack --config webpack.config.dev.js -w",
-    "build:webpack:prod": "webpack --config webpack.config.prod.js",
-    "build:webpack:prod-w": "webpack --config webpack.config.prod.js -w",
-    "build:webpack": "npm run build:webpack:dev && npm run build:webpack:prod",
-    "start": "npm run clean && npm run lint && concurrently npm:build:webpack:dev-w npm:build:webpack:prod-w npm:build:dts",
+    "build:webpack": "webpack --config webpack.config.dev.ts && webpack --config webpack.config.prod.ts",
+    "build:webpack:dev": "webpack --config webpack.config.dev.ts -w",
+    "build:webpack:prod": "webpack --config webpack.config.prod.ts -w",
+    "start": "npm run clean && npm run lint && concurrently npm:build:webpack:dev npm:build:webpack:prod npm:build:dts",
     "prettier": "prettier ./src --write",
     "lint": "eslint ./src --ext .ts",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest",
     "bpv": "npm version preminor --no-git-tag-version",
     "clean": "npm run clean:lib:win && npm run clean:lib:unix",
     "clean:temp": "npm run clean:temp:win && npm run clean:temp:unix",
@@ -28,7 +24,9 @@
     "clean:lib:unix": "npm run clean:check:unix || rm -rf lib",
     "clean:temp:win": "npm run clean:check:win || , if exist temp rmdir /Q /S temp",
     "clean:temp:unix": "npm run clean:check:unix || rm -rf temp",
-    "size": "size-limit"
+    "test-coverage": "vitest run --coverage",
+    "local:publish": "cd lib && npm publish --registry http://localhost:200/ && cd ..",
+    "cache:install": "npm i --registry http://localhost:200/"
   },
   "repository": {
     "type": "git",
@@ -37,7 +35,7 @@
   "author": "Arnaud Litaaba <litaabaarnaud@gmail.com>",
   "license": "MIT",
   "files": [
-    "lib/**/*"
+    "./**"
   ],
   "private": false,
   "bugs": {
@@ -49,8 +47,10 @@
     "@types/node": "^20.5.6",
     "@types/react": "^18.2.20",
     "@types/webpack": "^5.28.2",
+    "@types/webpack-bundle-analyzer": "^4.6.0",
     "@typescript-eslint/eslint-plugin": "^6.3.0",
     "@typescript-eslint/parser": "^6.3.0",
+    "@vitest/coverage-v8": "^0.34.4",
     "concurrently": "^8.2.1",
     "copy-webpack-plugin": "^11.0.0",
     "dts-bundle-generator": "^8.0.1",
@@ -58,33 +58,26 @@
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "prettier": "3.0.1",
-    "size-limit": "^8.2.6",
     "ts-loader": "^9.4.4",
+    "ts-node": "^10.9.1",
     "typescript": "^5.2.2",
+    "vitest": "^0.34.4",
     "webpack": "^5.88.2",
+    "webpack-bundle-analyzer": "^4.9.1",
     "webpack-cli": "^5.1.4"
   },
-  "directories": {
-    "lib": "lib"
-  },
-  "publishConfig": {
-    "registry": "http://localhost:8081/repository/klm-lab/"
-  },
-  "size-limit": [
-    {
-      "path": "lib/input.js",
-      "limit": "10 kB",
-      "ignore": [
-        "react"
-      ]
-    }
-  ],
   "exports": {
     ".": {
-      "types": "./lib/index.d.ts",
-      "import": "./lib/index.js",
-      "default": "./lib/index.js"
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "default": "./index.js"
     }
   },
-  "keywords": ["react","inputs","form","validation","state"]
+  "keywords": [
+    "react",
+    "inputs",
+    "form",
+    "validation",
+    "state"
+  ]
 }
