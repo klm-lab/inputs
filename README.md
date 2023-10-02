@@ -258,7 +258,7 @@ const [inputState, setInputState] = useInputs([
 
 There is no limit when you copy validation. But you must follow one rule.<br>
 
-> ![IMPORTANT]<br>
+> [!IMPORTANT]<br>
 > He who is copied must not copy himself or one of those who copy him**
 
 This is an example that leads to an infinite copy
