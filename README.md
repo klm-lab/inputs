@@ -158,7 +158,7 @@ const [inputState, setInputState] = useInputs({
 ```
 
 Error message can also be specific to each validation.
-> ![NOTE]<br>
+> [!NOTE]<br>
 > Specific error message has a priority on general error message.<br>
 > If we found a specific error message, it will be used otherwise, we fall back to the general error message if it
 > exists.
@@ -359,9 +359,9 @@ const [inputState, setInputState] = useInputs({
 ```
 
 You can match as many as you want, as long as you comply with the above rule.<br>
-If we apply it for match we get this rule<br>
+If we apply it for match, we get this rule<br>
 
-> ![IMPORTANT]<br>
+> [!IMPORTANT]<br>
 > He who is matched must not match himself or one of those who matched him.
 
 You cannot copy or match an input that doesn't exist. If you do so, you will get this error.<br>
@@ -384,7 +384,7 @@ const [inputState, setInputState] = useInputs({
 });
 ```
 
-> ![NOTE]<br>
+> [!NOTE]<br>
 > `copy` and `match` are basically the same. After the copy or the match, they always keep their own validation and
 > error message (specific or general) if present.<br>
 > `match` differs from `copy` by checking also if all matched inputs share the same value.<br>
@@ -479,7 +479,7 @@ useInputs(["name", "optional", "tag"])
 Validation properties are listed here <a href="#input-properties">INPUT PROPERTIES</a>.<br>
 But let's talk about a special one, **YOURS**. You can add a custom synchronous or asynchronous validation.<br>
 And to do so, you need to follow one rule.
-> ![IMPORTANT]<br>
+> [!IMPORTANT]<br>
 > Your custom validation must return a boolean, `true` or `false`. Nothing else
 
 * **Synchronous custom validation**
@@ -525,7 +525,7 @@ Well, your custom asynchronous validation will not be triggered. Or if triggered
 function<br>
 So, do not forget to set `async` to true when using asynchronous validation.
 
-> ![NOTE]<br>
+> [!NOTE]<br>
 > Remove async property if your custom validation is not asynchronous, otherwise, you will notice a delay when
 > validation occurs
 
