@@ -16,6 +16,7 @@
 </div>
 
 # AIO-INPUTS
+
 Input state management for React. It comes with useful common validations that are applied if you enabled them.<br>
 It supports custom validation asynchronous or not, with dynamic error messages.<br/>
 
@@ -32,455 +33,564 @@ It supports custom validation asynchronous or not, with dynamic error messages.<
 ##### First import useInputs
 
 ```js
-import { useInputs } from "aio-inputs";
+import {useInputs} from "aio-inputs";
 ```
 
 There are five different ways to use it.
+
 * **Passing a string**
 * **Passing an array of string**.
 * **Passing a mix of array of string and object**.
 * **Passing an array of objects**.
 * **Passing an object**.
 
+### Passing a string
 
-### String
 This is useful if you want a single input that doesn't require validation.
+
 ```js
-const [input,setInput] = useInputs("name")
+const [input, setInput] = useInputs("name")
 ```
+
 This gives you access to an input object with the following properties<br>
+`input.touched`<br>
 `input.valid`<br>
 `input.value`<br>
 `input.placeholder`<br>
-`input.id` which is `name` because you type **name**<br>
 and many other ready-to-use properties listed here <a href="#input-properties">INPUT PROPERTIES</a>.
 
+### Passing an array of string
 
-### Array of string
-Give you access to an array of inputs with ready-to-use properties listed here <a href="#input-properties">INPUT PROPERTIES</a>.
-```js
-const [input,setInput] = useInputs(["name","firstname"])
-```
-### Mix of array of string and object
-Useful when you want to keep validation on certain entries. For those who don't need validation, simply pass a string.<br>
-For example, name doesn't require validation, when firstName does.
+Give you access to an array of inputs with ready-to-use properties listed here <a href="#input-properties">INPUT
+PROPERTIES</a>.
 
 ```js
-const [input, setInput] = useInputs(["name", {validation: {minLength: 3} }])
+const [input, setInput] = useInputs(["name", "firstname"])
 ```
-You can also add an id to your inputs
+
+### Passing a mix of array of string and object
+
+Useful when you want to keep validation on certain entries. For those who don't need validation, simply pass a
+string.<br>
+For example, name doesn't require validation, when another input does.
+
 ```js
-const [input, setInput] = useInputs(["name", {id: "firstname", validation: {minLength: 3} }])
+const [input, setInput] = useInputs(["name", {validation: {minLength: 3}}])
 ```
+You can also name your inputs with the `name` property
+
+```js
+const [input, setInput] = useInputs(["name", {name: "myInputName",validation: {minLength: 3}}])
+```
+
 For available properties, JUMP here <a href="#input-properties">INPUT PROPERTIES</a>.
 
-### Array of objects
+### Passing an array of objects
 
 ```js
-const [input, setInput] = useInputs([{ id: "name" }, { id: "firstname" }])
+const [input, setInput] = useInputs([{}, {}])
 ```
 
-### Object
-Object that doesn't require validation
+### Passing an object
+
+Object that doesn't require validation.<br>
+
 ```js
-const [input,setInput] = useInputs({name: {},firstname: {}})
+const [input, setInput] = useInputs({name: {}, contact: {}})
 ```
+
 Object with validation
+
 ```js
-const [input,setInput] = useInputs({name: {validation : {required: true}}})
+const [input, setInput] = useInputs(
+    {
+        name: {validation: {minLength: 3}},
+        contact: {validation: {required: true}},
+    }
+)
 ```
+
 JUMP here for all properties <a href="#input-properties">INPUT PROPERTIES</a>.
 
 ### Binding htmlInputElements
+
 Now you are ready to bind some htmlInputElements to your input state. For example
+
 ```js
-const [inputState,setInputState] = useInputs("name");
-         
-<div>
-  <input value={inputState.value}/>
-</div>;
+const [inputState, setInputState] = useInputs("name");
+
+<input value={inputState.value}/>
 ```
+
 More example with some validation rules. When you add validation don't forget to provide a general error message.<br>
-Error message, specific or not can be set as a string or map of string / object for internationalization support
+An Error message, specific or not can be set as a string or map of string / object for internationalization support
+
 * General error message as a string
+
 ```js
-const [inputState,setInputState] = useInputs({
-  name: {
-    errorMessage: "my error message",
-    validation: {
-      minLength: 3
+const [inputState, setInputState] = useInputs({
+    name: {
+        errorMessage: "my error message",
+        validation: {
+            minLength: 3
+        }
     }
-  }
 });
 ```
+
 * General error message as object
+
 ```js
 const language = getLanguageFromSomewhere()
 
-const [inputState,setInputState] = useInputs({
-  name: {
-    errorMessage: {
-      fr: "Some fr error",
-      en: "Some en error"
-    },
-    validation: {
-      minLength: 3
+const [inputState, setInputState] = useInputs({
+    name: {
+        errorMessage: {
+            fr: "Some fr error",
+            en: "Some en error"
+        },
+        validation: {
+            minLength: 3
+        }
     }
-  }
 });
 <span>{inputState.name.errorMessage[language]}</span>
 ```
+
 Error message can also be specific to each validation.
->![NOTE]<br>
-> Specific error message has a priority on general error message.<br> If we found a specific error message, it will be used otherwise, we fall back to the general error message if it exists
+> ![NOTE]<br>
+> Specific error message has a priority on general error message.<br>
+> If we found a specific error message, it will be used otherwise, we fall back to the general error message if it
+> exists.
+
 ```js
 // As a string
-const [inputState,setInputState] = useInputs({
-  name: {
-    validation: {
-        required: {
-            message: "This fied is required"
-        },
-        minLength: {
-          value: 3,
-          message: "At least 3 characters"
+const [inputState, setInputState] = useInputs({
+    name: {
+        validation: {
+            required: {
+                message: "This field is required"
+            },
+            minLength: {
+                value: 3,
+                message: "At least 3 characters"
+            }
         }
     }
-  }
 });
 
 // As an object
-const [inputState,setInputState] = useInputs({
-  name: {
-    validation: {
-        required: {
-            message: {
-                fr: "Cette valeur est requise",
-                en: "This fied is required"
+const [inputState, setInputState] = useInputs({
+    name: {
+        validation: {
+            required: {
+                message: {
+                    fr: "Cette valeur est requise",
+                    en: "This field is required"
+                }
+            },
+            minLength: {
+                value: 3,
+                message: {
+                    fr: "Au moins 3 caractères",
+                    en: "At least 3 characters"
+                }
             }
-        },
-        minLength: {
-          value: 3,
-          message: {
-              fr: "Au moins 3 caractères",
-              en: "At least 3 characters"
-          }
         }
     }
-  }
 });
 ```
+
 ## Share validation
+
 You can share validation rules across your inputs with the `copy` keyword.
- * With object as entry
+
+* **With object as entry**
 
 ```js
-const [inputState,setInputState] = useInputs({
-  homePhone: {
-    validation: {
-      required: true,
-      minLength: 10,
-      startsWith: "+"
+const [inputState, setInputState] = useInputs({
+    homePhone: {
+        validation: {
+            required: true,
+            minLength: 10,
+            startsWith: "+"
+        }
+    },
+    officePhone: {
+        validation: {
+            copy: "homePhone",
+            //... add those intended only for officePhone if you wish
+        }
     }
-  },
-  officePhone: {
-    validation: {
-      copy: "homePhone",
-      //... add those intended only for officePhone if you wish
-    }
-  }
 });
 ```
-* With array as entry
 
-You need to provide `id` for the input you want to copy
+* **With array as entry**
+
+You need to provide `id` for the input you want to copy. Make sure it is unique otherwise, Same id on inputs merge those
+inputs into one Input.<br>
+ID need to be unique in the current component not in your app.<br>
+`Component1 inputs => id => "test` ✅<br>
+`Component2 inputs => id => "test` ✅<br>
+`Component1 inputs => id => "test` ❌ <br>
+`Component1 inputs => id => "test` ❌ <br>
+
 ```js
-const [inputState,setInputState] = useInputs([
-  {
-      // id here
-    id: "homePhone",
-    validation: {
-      required: true,
-      minLength: 10,
-      startsWith: "+"
+const [inputState, setInputState] = useInputs([
+    {
+        // id here
+        id: "homePhone",
+        validation: {
+            required: true,
+            minLength: 10,
+            startsWith: "+"
+        }
+    },
+    {
+        validation: {
+            // We copy
+            copy: "homePhone",
+            //... add those intended only for officePhone if you wish
+        }
     }
-  },
-  {
-    validation: {
-      // We copy
-      copy: "homePhone",
-      //... add those intended only for officePhone if you wish
-    }
-  }
 ]);
 ```
 
 There is no limit when you copy validation. But you must follow one rule.<br>
-### ❗ He who is copied must not copy himself or one of those who copy him**
+
+> ![IMPORTANT]<br>
+> He who is copied must not copy himself or one of those who copy him**
+
 This is an example that leads to an infinite copy
+
 ```js
-const [inputState,setInputState] = useInputs({
-  homePhone: {
-    validation: {
-      required: true,
-      minLength: 10,
-      startsWith: "+",
-      copy: "officePhone"
+const [inputState, setInputState] = useInputs({
+    homePhone: {
+        validation: {
+            required: true,
+            minLength: 10,
+            startsWith: "+",
+            copy: "officePhone"
+        }
+    },
+    officePhone: {
+        validation: {
+            regex: /..../,
+            copy: "homePhone"
+        }
     }
-  },
-  officePhone: {
-    validation: {
-      regex: /..../,
-      copy: "homePhone"
-    }
-  }
 });
 ```
+
 Here `officePhone` copy `homePhone` which copy `officePhone` and so on leading to an infinite copy.<br>
-If you want `homePhone` to copy `regex` validation from `officePhone` while `officePhone` copy validation from `homePhone`,<br>
+If you want `homePhone` to copy `regex` validation from `officePhone` while `officePhone` copy validation
+from `homePhone`,<br>
 you can do it that way because at the end, they will share same validation rules.
 
 ```js
-const [inputState,setInputState] = useInputs({
-  homePhone: {
-    validation: {
-      required: true,
-      minLength: 10,
-      startsWith: "+",
-      // Move regex here
-      regex: /.../,
+const [inputState, setInputState] = useInputs({
+    homePhone: {
+        validation: {
+            required: true,
+            minLength: 10,
+            startsWith: "+",
+            // Move regex here
+            regex: /.../,
+        }
+    },
+    officePhone: {
+        validation: {
+            // we copy here
+            copy: "homePhone"
+        }
     }
-  },
-  officePhone: {
-    validation: {
-      // we copy here
-      copy: "homePhone"
-    }
-  }
-});
-```
-You can copy as many as you want as long as you comply with the above rule. Here for example, `username` copy `firstname` who copy `name`
-```js
-const [inputState,setInputState] = useInputs({
-  name: {
-    validation: {
-      required: true,
-      minLength: 5,
-      maxLength: 100
-    }
-  },
-  firstname: {
-    validation: {
-      copy: "name"
-    }
-  },
-  username: {
-    validation: {
-      copy: "firstname", // or copy name, it doesn't matter
-      regex: /..../ // only for username
-    }
-  }
 });
 ```
 
-`match` key works the same in a little different way. Instead of only coping validation, it makes sure that inputs share the same validation and the same value.<br>
+You can copy as many as you want as long as you comply with the above rule. Here for example, `username`
+copy `firstname` who copy `name`, when `grandPa` copy `firstname` and so on . The order doesn't matter
+
+```js
+const [inputState, setInputState] = useInputs({
+    name: {
+        validation: {
+            required: true,
+            minLength: 5,
+            maxLength: 100
+        }
+    },
+    firstname: {
+        validation: {
+            copy: "username"
+        }
+    },
+    username: {
+        validation: {
+            copy: "name", // or copy name
+            regex: /..../ // only for username
+        }
+    },
+    grandPa: {
+        validation: {
+            copy: "firstname", // or copy name, it doesn't matter
+        }
+    }
+});
+```
+
+`match` key works the same in a little different way. Instead of only copy validation, it makes sure that inputs share
+the same validation and the same value.<br>
 It is very useful for example password validation.
+
 ```js
-const [inputState,setInputState] = useInputs({
-  password: {
-    validation: {
-      required: true,
-      minLength: 8,
+const [inputState, setInputState] = useInputs({
+    password: {
+        validation: {
+            required: true,
+            minLength: 8,
+        }
+    },
+    confirmPassword: {
+        validation: {
+            match: "password"
+        }
     }
-  },
-  confirmPassword: {
-    validation: {
-      match: "password"
-    }
-  }
 });
 ```
-You can match as many as you want, as long as you comply with the above rule.<br>
-Let me remember it for you <br>
-### ❗ He who is matched must not match himself or one of those who match him**
 
->![WARNING]<br>
-> You cannot copy or match an input that doesn't exist. If you do so, you will get this error
-> 
->`TypeError: Cannot read properties of undefined reading 'validation'`<br>
+You can match as many as you want, as long as you comply with the above rule.<br>
+If we apply it for match we get this rule<br>
+
+> ![IMPORTANT]<br>
+> He who is matched must not match himself or one of those who matched him.
+
+You cannot copy or match an input that doesn't exist. If you do so, you will get this error.<br>
+`TypeError: Cannot read properties of undefined reading 'validation'`<br>
 
 ```js
-const [inputState,setInputState] = useInputs({
-  password: {
-    validation: {
-      required: true,
-      minLength: 8,
+const [inputState, setInputState] = useInputs({
+    password: {
+        validation: {
+            required: true,
+            minLength: 8,
+        }
+    },
+    confirmPassword: {
+        validation: {
+            // ❌ We match something that doesn't exist
+            match: "sdhslhdlhsdl"
+        }
     }
-  },
-  confirmPassword: {
-    validation: {
-      // ❌ We match something that doesn't exist
-      match: "sdhslhdlhsdl"
+});
+```
+
+> ![NOTE]<br>
+> `copy` and `match` are basically the same. After the copy or the match, they always keep their own validation and
+> error message (specific or general) if present.<br>
+> `match` differs from `copy` by checking also if all matched inputs share the same value.<br>
+> It is important to understand the difference between them and use them accordingly
+
+Common use case example with a custom error message for both inputs.
+
+```js
+const [inputState, setInputState] = useInputs({
+    password: {
+        errorMessage: "Differ from password confirmation",
+        validation: {
+            required: true,
+            minLength: 8,
+        }
+    },
+    confirmPassword: {
+        // We keep this message for error on confirmPassword and share validation with password
+        errorMessage: "Differ from password",
+        validation: {
+            match: "password"
+        }
     }
-  }
 });
 ```
 
 ## Handle input changes
 
 * **String update** <br>If you pass a string, handle change like this, and we will take care of all other stuff
-```js
-const [inputState,setInputState] = useInputs("name");
 
-<input value={inputState.value} onChange={(e)=> setInputState(e.target.value)}/>
+```js
+const [inputState, setInputState] = useInputs("name");
+
+<input value={inputState.value} onChange={(e) => setInputState(e.target.value)}/>
 ```
+
 Just pass the value and you are done.
 
-* **Array of string update** <br>If you pass an array of string, handle change like this, and we will take care of all other stuff
+* **Array of string update** <br>If you pass an array of string, handle change like this, and we will take care of all
+  other stuff
+
 ```js
-const [inputState,setInputState] = useInputs(["name","firstname"]);
+const [inputState, setInputState] = useInputs(["name", "firstname"]);
 
 <div>
-  {inputState.map((input) => {
-    return <input key={input.key} value={input.value} onChange={e=> setInputState(input,e.target.value)}/>
-  })}
+    {inputState.map((input) => {
+        return <input key={input.key} value={input.value} onChange={e => setInputState(input, e.target.value)}/>
+    })}
 </div>
 ```
+
 Just pass the input and the value, and you are done.
+
 * **Object update** <br>If you pass an object, handle change like this, and we will take care of all other stuff
+
 ```js
-const [inputState,setInputState] = useInputs({
-  contact: {},
-  description: {
-    validation: {
-      minLength: 10,
-    }
-  },
-  extra: {},
+const [inputState, setInputState] = useInputs({
+    contact: {},
+    description: {
+        validation: {
+            minLength: 10,
+        }
+    },
+    extra: {},
 });
 
 const {description} = inputState;
 
-<input value={description.value} onChange={e=> setInputState(description,e.target.value)}/>
+<input value={description.value} onChange={e => setInputState(description, e.target.value)}/>
 ```
-Just pass the input and the value, and you are done.
 
-If you are using object and do not want validation, Generate your input like this
+Just pass the input you are updating and the value, and you are done.
+
+If you are using object and do not want validation, Generate your inputs like this
+
 ```js
-const [inputState,setInputState] = useInputs({
-  name: {},
-  optional: {},
-  tag: {}
+const [inputState, setInputState] = useInputs({
+    name: {},
+    optional: {},
+    tag: {}
 })
 ```
+
 But if you really do not need validation, we recommend you to use the array instead. It is shorter.
+
 ```js
-useInputs(["name","optional","tag"])
+useInputs(["name", "optional", "tag"])
 ```
 
-## Validation 
+## Validation
+
 Validation properties are listed here <a href="#input-properties">INPUT PROPERTIES</a>.<br>
 But let's talk about a special one, **YOURS**. You can add a custom synchronous or asynchronous validation.<br>
 And to do so, you need to follow one rule.
->![IMPORTANT]<br>
+> ![IMPORTANT]<br>
 > Your custom validation must return a boolean, `true` or `false`. Nothing else
 
-* Synchronous custom validation
-```js
-const [myInputs,setMyInputs] = useInputs({
-  name: {
-    validation: {
-      //  setErrorMessage is optionnal. But you can use it to update the error message
-      custom: (value,setErrorMessage) => {
-        // we will give you the value entered by the user and a function to update the error message if you want
-        // validate it like you want but at the end tell us if it is valid or not
-        // After doing your validation
-        return true or false
-      }
-    }
-  }
-})
-```
-
-* Asynchronous custom validation<br>
-For performance purpose, you need to pass `async` property to `true`.
-Do not worry about multiple calls to the server. We make sure to call the server only when user stops typing.
+* **Synchronous custom validation**
 
 ```js
-const [myInputs,setMyInputs] = useInputs({
-  name: {
-    validation: {
-        async: true,
-      //  setErrorMessage is optionnal. But you can use it to update the error message
-        custom: async (value, setErrorMessage) => {
-            await someting
-            return true or false
+const [myInputs, setMyInputs] = useInputs({
+    name: {
+        validation: {
+            //  set is optionnal. But you can use it to update the error message
+            custom: (value, set) => {
+                // we will give you the value entered by the user and a function to update the error message if you want
+                // validate it like you want but at the end tell us if it is valid or not
+                // After doing your validation
+                return true
+            }
         }
     }
-  }
 })
 ```
-**What happen if I didn't set `async` property with custom asynchronous validation ?**<br>
-Well, your custom asynchronous validation will not be triggered. Or if triggered, will be treated as a synchronous function<br>
-So, do not forget to set `async` to true when using asynchronous validation
 
-* Asynchronous custom validation with Promise
+* **Asynchronous custom validation**<br>
+  For performance purpose, you need to pass `async` property to `true`.
+  Do not worry about multiple calls to the server. We make sure to call the server only when user stops typing.
+
 ```js
-const [myInputs,setMyInputs] = useInputs({
-  name: {
-    validation: {
-        async: true,
-      //  setErrorMessage is optionnal. But you can use it to update the error message
-        custom: (value,setErrorMessage) => new Promise(resolve => {
-        // we will give the value entered by the user.
-        // validation it like you want but at the end tell us if it is valid or not
-        // After doing your validation
-            resolve(true or false)
-        })
+const [myInputs, setMyInputs] = useInputs({
+    name: {
+        validation: {
+            async: true,
+            //  set is optionnal. But you can use it to update the error message
+            custom: async (value, set) => {
+                const r = await someting;
+                !r.valid && set("Not available")
+                return r.valid
+            }
+        }
     }
-  }
 })
 ```
 
-* Asynchronous indicator<br>
-You can show some loader when doing asynchronous validation.<br>
-For example, we want username to be unique, so we call our server to check if user choice is available or already taken.<br>
-you can use the `validating` property for that
+**What happen if I didn't set `async` property with custom asynchronous validation ?**<br>
+Well, your custom asynchronous validation will not be triggered. Or if triggered, will be treated as a synchronous
+function<br>
+So, do not forget to set `async` to true when using asynchronous validation.
+
+> ![NOTE]<br>
+> Remove async property if your custom validation is not asynchronous, otherwise, you will notice a delay when
+> validation occurs
+
+* **Asynchronous custom validation with Promise**
+
+```js
+const [myInputs, setMyInputs] = useInputs({
+    name: {
+        validation: {
+            async: true,
+            custom: (value) => new Promise(resolve => {
+                resolve(true)
+            })
+        }
+    }
+})
+```
+
+* **Asynchronous indicator**<br>
+  You can show some loader when doing asynchronous validation.<br>
+  For example, we want username to be unique, so we call our server to check if user choice is available or already taken.<br>
+  You can use the `validating` property for that
+
 ```js
 
 const [myInputs, setMyInputs, form] = useInputs({
-  username: {
-    validation: {
-        async: true,
-        custom: async (value) => {
-            return true or false
+    username: {
+        validation: {
+            async: true,
+            custom: async (value) => {
+                // some stuff
+                return false
+            }
         }
     }
-  }
 })
 
-{myInputs.username.validating && <span>Validating your username ....</span>}
+// Later
+myInputs.username.validating && <span>Validating your username ....</span>
 ```
-## Form object
-In the `form` object, you have access to a `reset` method and a `isValid` property. <br>
- * `reset` let you reset a form when you successfully submit<br>
- * `isValid` tell you if the whole form is valid, if all your inputs are valid<br>
 
+## Form object
+
+In the `form` object, you have access to a `reset` method and a `isValid` property. <br>
+
+* `reset` let you reset a form when you successfully submit<br>
+* `isValid` tell you if the whole form is valid, if all your inputs are valid<br>
 
 ### Reset
+
 ```js
-const [myInputs,setMyInputs,form] = useInputs(...)
+const [myInputs, setMyInputs, form] = useInputs(...)
 
 // Reset your form
 form.reset()
 ```
-### isValid
+
+### IsValid
+
 ```js
 const [myInputs, setMyInputs, form] = useInputs(...)
 
 const submit = () => {
-    if(form.isValid) {
-     // Submit
+    if (form.isValid) {
+        // Submit
     }
 }
 
@@ -489,9 +599,13 @@ const submit = () => {
 
 ## Input properties
 
-These are automatically added to your state when your call `useInputs`. You can override their value by passing them. Except two internal used keys
+These are automatically added to your state when your call `useInputs`. You can override their value by passing them.
+Except two internal used keys
 `__`, `___`. Those keys are used internally. You can't override them
 
+* `id` input id. `<-- overridable` only if you deal with object as entry
+* `key` A crypto-based key for your input. `<-- not overridable`
+* `name` Input name. `<-- overridable`
 * `type` Html input element type. `<-- overridable`
 * `label` Input label. `<-- overridable`
 * `value` Input value. `<-- overridable but will change on user input`
@@ -500,11 +614,12 @@ These are automatically added to your state when your call `useInputs`. You can 
 * `touched` Tell you if input is touched or not. `<-- overridable but will change on user input`
 * `placeholder` Input placeholder. `<-- overridable`
 * `errorMessage` General error message when input is invalid. `<-- overridable`
-* `validating` Tell you if an asynchronous validation in processing state `<-- overridable but will change when processing an asynchronous validation`
-* `validation` Validation options. See the validation properties <a href="#validation-properties">HERE</a> `<-- overridable`
+* `validating` Tell you if an asynchronous validation is in processing
+  state `<-- overridable but will change when processing an asynchronous validation`
+* `validation` Validation options. See the validation properties <a href="#validation-properties">
+  HERE</a> `<-- overridable`
 * `__` Internal key. `<-- not overridable`
 * `___` Internal key. `<-- not overridable`
-
 
 ### Validation properties
 
@@ -524,7 +639,7 @@ These are automatically added to your state when your call `useInputs`. You can 
 * `endsWith` The input will end with that value. `<-- string`
 * `equalsTo` The input will be strictly equal to that value. `<-- any`
 * `regex` Your regex validation. `<-- regex`
-* `custom` A function that return a boolean. `<-- (value, setErrorMessage) => boolean or Promise<boolean>`.
+* `custom` A function that return a boolean. `<-- (value, set) => boolean or Promise<boolean>`.
 
 ### Validation properties with specific error message
 
@@ -534,17 +649,20 @@ These are automatically added to your state when your call `useInputs`. You can 
 * `min` The minimum acceptable value. `<-- {value: number, message: string or object }`
 * `max` The maximum acceptable value. `<-- {value: number, message: string or object }`
 * `minLength` The minimum length of the value. `<-- {value: number, message: string or object }`
-* `minLengthWithoutSpace` The minimum length of trimmed value with no space at all. `<-- {value: number, message: string or object }`
+* `minLengthWithoutSpace` The minimum length of trimmed value with no space at
+  all. `<-- {value: number, message: string or object }`
 * `maxLength` The maximum length of the value. `<-- {value: number, message: string or object }`
-* `maxLengthWithoutSpace` The maximum length of trimmed value with no space at all. `<-- {value: number, message: string or object }`
+* `maxLengthWithoutSpace` The maximum length of trimmed value with no space at
+  all. `<-- {value: number, message: string or object }`
 * `startsWith` The input will start with that value. `<-- {value: string, message: string or object }`
 * `endsWith` The input will end with that value. `<-- {value: string, message: string or object }`
 * `equalsTo` The input will be strictly equal to that value. `<-- {value: any, message: string or object }`
 * `regex` Your regex validation. `<-- {value: regex, message: string or object }`
 
-
 #### In case of validation with specific message, if it is a boolean, you can omit the value.<br>
+
 For example
+
 ```js
 validation: {
     required: {
@@ -555,7 +673,9 @@ validation: {
     }
 }
 ```
+
 #### Not a boolean case,
+
 ```js
 validation: {
     regex: {
@@ -575,8 +695,11 @@ validation: {
 
 
 [size-shield]: https://img.shields.io/bundlephobia/minzip/aio-inputs/2.4.0?style=for-the-badge
+
 [dependencies-shield]: https://img.shields.io/badge/dependencies-0-green?style=for-the-badge
+
 [license-shield]: https://img.shields.io/github/license/klm-lab/store?style=for-the-badge
+
 [version-shield]: https://img.shields.io/npm/v/aio-inputs?style=for-the-badge
 
 
