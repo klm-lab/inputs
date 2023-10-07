@@ -1,12 +1,54 @@
 // __ => help us validate matched keys
 // ___ => help us save original errorMessage
 
+type HTMLInputTypeAttribute =
+  | "button"
+  | "checkbox"
+  | "color"
+  | "date"
+  | "datetime-local"
+  | "email"
+  | "file"
+  //| "hidden"
+  //| "image"
+  | "month"
+  | "number"
+  | "password"
+  | "radio"
+  | "range"
+  //| "reset"
+  | "search"
+  //| "submit"
+  | "tel"
+  | "text"
+  | "time"
+  | "url"
+  | "week"
+  | (string & {});
+
 type ValuesType = any;
+
+interface SpreadReactType {
+  id: string;
+  value: any;
+  type: HTMLInputTypeAttribute;
+  name?: string;
+  label?: string;
+  placeholder: StringOrObj;
+}
 
 interface Form {
   isValid: boolean;
 
   reset(): void;
+}
+
+interface ArrayForm extends Form {
+  toObject(): ObjState;
+}
+
+interface ObjectForm extends Form {
+  toArray(): Input[];
 }
 
 interface CustomValidationType {
@@ -22,6 +64,11 @@ type MatchResultType = {
   validation?: ValidationStateType;
 };
 
+type MergeType = {
+  omit?: Set<keyof ValidationStateType>;
+  keyPath?: keyof ValidationStateType;
+};
+
 type StringOrMap = string | { value: string; message: ErrorMessageType };
 
 type BooleanOrMap = boolean | { value?: boolean; message: ErrorMessageType };
@@ -29,6 +76,9 @@ type BooleanOrMap = boolean | { value?: boolean; message: ErrorMessageType };
 type NumberOrMap = number | { value: number; message: ErrorMessageType };
 
 type AnyOrMap = any | { value: any; message: ErrorMessageType };
+
+type CopyKeyObjType = { value: string; omit: Set<keyof ValidationStateType> };
+type CopyType = { value: string; omit: (keyof ValidationStateType)[] };
 
 interface ValidationStateType {
   required?: BooleanOrMap;
@@ -46,25 +96,24 @@ interface ValidationStateType {
   endsWith?: StringOrMap;
   equalsTo?: AnyOrMap;
   regex?: RegExp;
-  copy?: string;
+  copy?: CopyType;
   custom?: CustomValidationType;
-  __?: string[];
 }
 
-type ErrorMessageType = StringOrMap;
+type StringOrObj = string | { [k in string]: string };
+type ErrorMessageType = StringOrObj;
 
 interface Input {
   id?: string;
-  name?: string;
-  type?: string;
-  label?: string;
+  name?: StringOrObj;
+  type?: HTMLInputTypeAttribute;
+  label?: StringOrObj;
   value?: ValuesType;
   resetValue?: ValuesType;
   valid?: boolean;
   touched?: boolean;
-  placeholder?: string;
+  placeholder?: StringOrObj;
   errorMessage?: ErrorMessageType;
-  ___?: ErrorMessageType;
   key?: string;
   validation?: ValidationStateType;
   validating?: boolean;
@@ -77,10 +126,14 @@ type ObjState = {
 type ObjStateOutput<Key> = [
   { [k in Key & string]: Input },
   (input: Input, value: any) => void,
-  Form
+  ObjectForm
 ];
-type StringStateOutput = [Input, (value: any) => void, Form];
-type ArrayStateOutput = [Input[], (input: Input, value: any) => void, Form];
+type StringStateOutput = [Input, (value: any) => void, ObjectForm];
+type ArrayStateOutput = [
+  Input[],
+  (input: Input, value: any) => void,
+  ArrayForm
+];
 
 type StateType = "object" | "array";
 
@@ -97,5 +150,9 @@ export type {
   MatchResultType,
   Form,
   StringOrMap,
-  ErrorMessageType
+  ErrorMessageType,
+  CopyKeyObjType,
+  MergeType,
+  CopyType,
+  SpreadReactType
 };

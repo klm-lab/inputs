@@ -114,7 +114,7 @@ JUMP here for all properties <a href="#input-properties">INPUT PROPERTIES</a>.
 
 ### Binding htmlInputElements
 
-Now you are ready to bind some htmlInputElements to your input state. For example
+Let's bind some htmlInputElements to your input state. For example
 
 ```js
 const [inputState, setInputState] = useInputs("name");
@@ -338,9 +338,39 @@ const [inputState, setInputState] = useInputs({
 });
 ```
 
+You can also omit some validation from the copied one
+```js
+const [inputState, setInputState] = useInputs({
+    name: {
+        validation: {
+            required: true,
+            minLength: 5,
+            maxLength: 100,
+            startWith: "🤷‍♀️",
+            custom: (value) => true
+        }
+    },
+    firstname: {
+        validation: {
+            copy: {
+              value: "name",
+              omit: ["startsWith","custom"]
+            }
+        }
+    },
+});
+```
+
 `match` key works the same in a little different way. Instead of only copy validation, it makes sure that inputs share
 the same validation and the same value.<br>
-It is very useful for example password validation.
+It is very useful for example password validation.<br>
+>[!WARNING]<br>
+> `match` gives priority to the last matched validation among matched inputs. This is the purpose of **matching**. (Share strictly the same validation).<br>
+> But `match` allows you in case validation with specific errorMessage to override the errorMessage and only the errorMessage. Any value found when overriding the errorMessage will simply be ignored.
+
+Let's remove the confusion with an example.
+
+* **Ignored validation when using `match`**
 
 ```js
 const [inputState, setInputState] = useInputs({
@@ -352,14 +382,55 @@ const [inputState, setInputState] = useInputs({
     },
     confirmPassword: {
         validation: {
-            match: "password"
+            match: "password",
+          // ❌ Ignored
+          otherValidation: ...
+          // ❌ Ignored
+          otherValidation: ...
+          // ❌ Ignored
+          otherValidation: ...
+        }
+    }
+});
+```
+* **Overriding message when using `match`**
+
+```js
+const [inputState, setInputState] = useInputs({
+    password: {
+        errorMessage: "Differ from confirmation",
+        validation: {
+            required: {
+              // Specific error message
+                message: "The password is required"
+            },
+            minLength: {
+                value: 8,
+              // Specific error message
+                message: "The password must have at least 8 characters"
+            },
+        }
+    },
+    confirmPassword: {
+      errorMessage: "Differ from password",
+        validation: {
+            match: "password",
+            required: {
+              //✅ Overriding error message. Will be kept
+              message: "Confirmation is required" 
+            },
+            minLength: {
+               // ❌ Ignored
+                value: 10,
+              //✅ Overriding error message. Will be kept
+              message: "Confirmation must have at least 8 characters"
+            }
         }
     }
 });
 ```
 
-You can match as many as you want, as long as you comply with the above rule.<br>
-If we apply it for match, we get this rule<br>
+You can match as many as you want, as long as you comply with this rule.<br>
 
 > [!IMPORTANT]<br>
 > He who is matched must not match himself or one of those who matched him.
@@ -385,9 +456,8 @@ const [inputState, setInputState] = useInputs({
 ```
 
 > [!NOTE]<br>
-> `copy` and `match` are basically the same. After the copy or the match, they always keep their own validation and
-> error message (specific or general) if present.<br>
-> `match` differs from `copy` by checking also if all matched inputs share the same value.<br>
+> `copy` and `match` are basically the same. But copy gives priority to defined validation over copied validation.<br>
+> `match` differs from `copy` by checking also if all matched inputs share the same value and strictly share the same validation rules except errorMessage.<br>
 > It is important to understand the difference between them and use them accordingly
 
 Common use case example with a custom error message for both inputs.
@@ -493,7 +563,14 @@ const [myInputs, setMyInputs] = useInputs({
                 // we will give you the value entered by the user and a function to update the error message if you want
                 // validate it like you want but at the end tell us if it is valid or not
                 // After doing your validation
-                return true
+              
+              // Update the errorMessage in Javascript,
+              set(myErrorMessage)
+              // Update the errorMessage in Typescript,
+              // Since Set is an optionalprams, we need to tell typecript that it is not undefined by addin a `!`
+              set!(myErrorMessage)
+              
+              return true
             }
         }
     }
@@ -569,9 +646,11 @@ myInputs.username.validating && <span>Validating your username ....</span>
 
 ## Form object
 
-In the `form` object, you have access to a `reset` method and a `isValid` property. <br>
+In the `form` object, you have access some useful properties. <br>
 
 * `reset` let you reset a form when you successfully submit<br>
+* `toArray` Return an array version of your inputs.<br>
+* `toObject` Return an object version of your inputs.<br>
 * `isValid` tell you if the whole form is valid, if all your inputs are valid<br>
 
 ### Reset
@@ -581,6 +660,25 @@ const [myInputs, setMyInputs, form] = useInputs(...)
 
 // Reset your form
 form.reset()
+```
+### ToArray
+
+```js
+const [myInputs, setMyInputs, form] = useInputs({...})
+
+
+const myArrayFrom = form.toArray()
+```
+
+### ToObject
+It is a good practice to always add an `id` to your inputs. The `id` property is used when you transform your inputs.
+If `id` is not found, we use a generated one. So if you do not provide `id`, do a console.log(...) to see your transformed inputs.
+
+```js
+const [myInputs, setMyInputs, form] = useInputs([...])
+
+
+const myObjectFrom = form.toObject()
 ```
 
 ### IsValid
@@ -600,26 +698,20 @@ const submit = () => {
 ## Input properties
 
 These are automatically added to your state when your call `useInputs`. You can override their value by passing them.
-Except two internal used keys
-`__`, `___`. Those keys are used internally. You can't override them
 
 * `id` input id. `<-- overridable` only if you deal with object as entry
 * `key` A crypto-based key for your input. `<-- not overridable`
-* `name` Input name. `<-- overridable`
+* `name` Input name. `<-- overridable` as string or ({en: "", fr: "", ...}).
 * `type` Html input element type. `<-- overridable`
-* `label` Input label. `<-- overridable`
+* `label` Input label. `<-- overridable` as string or ({en: "", fr: "", ...}).
 * `value` Input value. `<-- overridable but will change on user input`
 * `resetValue` The value to put when you reset the input. `<-- overridable`
 * `valid` Tell you if input is valid or not. `<-- overridable but can change on user input based on validation`
 * `touched` Tell you if input is touched or not. `<-- overridable but will change on user input`
-* `placeholder` Input placeholder. `<-- overridable`
-* `errorMessage` General error message when input is invalid. `<-- overridable`
-* `validating` Tell you if an asynchronous validation is in processing
-  state `<-- overridable but will change when processing an asynchronous validation`
-* `validation` Validation options. See the validation properties <a href="#validation-properties">
-  HERE</a> `<-- overridable`
-* `__` Internal key. `<-- not overridable`
-* `___` Internal key. `<-- not overridable`
+* `placeholder` Input placeholder. `<-- overridable` as string or ({en: "", fr: "", ...}).
+* `errorMessage` General error message when input is invalid. `<-- overridable` as string or ({en: "", fr: "", ...}).
+* `validating` Tell you if an asynchronous validation is in processing state
+* `validation` Validation options. See the validation properties <a href="#validation-properties">HERE</a> `<-- overridable`
 
 ### Validation properties
 
@@ -634,7 +726,7 @@ Except two internal used keys
 * `maxLength` The maximum length of the value. `<-- number`
 * `maxLengthWithoutSpace` The maximum length of trimmed value with no space at all. `<-- number`
 * `match` The matched input name. `<-- string`
-* `copy` The copied input name. `<-- string`
+* `copy` The copied input name. `<-- string | {value: string, omit: (Validation properties)[]}`
 * `startsWith` The input will start with that value. `<-- string`
 * `endsWith` The input will end with that value. `<-- string`
 * `equalsTo` The input will be strictly equal to that value. `<-- any`
@@ -684,7 +776,7 @@ validation: {
     },
     endsWith: {
         value: "end"
-        message: "Must en with end"
+        message: "Must end with end"
     }
 }
 ```
@@ -694,11 +786,11 @@ validation: {
 [MIT][license-url]
 
 
-[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-inputs/2.4.0?style=for-the-badge
+[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-inputs/1.1.1?style=for-the-badge
 
 [dependencies-shield]: https://img.shields.io/badge/dependencies-0-green?style=for-the-badge
 
-[license-shield]: https://img.shields.io/github/license/klm-lab/store?style=for-the-badge
+[license-shield]: https://img.shields.io/github/license/klm-lab/inputs?style=for-the-badge
 
 [version-shield]: https://img.shields.io/npm/v/aio-inputs?style=for-the-badge
 

@@ -16,30 +16,43 @@ import {
 } from "./util";
 import { validate, validateAsync } from "./validation";
 import { useCallback, useMemo, useState } from "react";
+import { Helper } from "./util/helper";
 
 const populate = (state: any, type: StateType): any => {
   const final = {} as ObjState;
+  const helper = new Helper();
   for (const stateKey in state) {
     const parseKey = type === "object" ? stateKey : state[stateKey].id;
-    final[parseKey] = {
+    const key = crypto.randomUUID();
+    const v = {
       ...common(state[stateKey]),
       ...state[stateKey],
-      ...(type === "object" ? { id: stateKey } : {})
+      ...(type === "object" ? { id: stateKey, key } : { key })
     };
+    final[parseKey] = v;
+    helper.state[parseKey] = { ...v };
   }
-  const s = matchRules(final);
-  return [type === "object" ? s : transform(s, "array"), stateIsValid(s)];
+  const s = helper.clean(matchRules(final, helper));
+  return [
+    type === "object" ? s : transform(s, "array"),
+    stateIsValid(s),
+    helper
+  ];
 };
 
 function inputs(initialState: any, type: StateType, selective?: string) {
-  const [entry, valid] = useMemo(() => populate(initialState, type), []);
+  const [entry, valid, helper] = useMemo(
+    () => populate(initialState, type),
+    []
+  );
 
   const [{ inputs, formIsValid }, setInputs] = useState({
     inputs: entry,
     formIsValid: valid
   });
-  const setState = useCallback(function (input: any, value: ValuesType) {
+  const setState = useCallback(function (input: Input, value: ValuesType) {
     return onChange(
+      helper,
       selective ? inputs[selective] : input,
       selective ? input : value,
       setInputs,
@@ -56,14 +69,26 @@ function inputs(initialState: any, type: StateType, selective?: string) {
     });
   }, []);
 
+  const formT = useCallback(
+    function () {
+      return transform(inputs, type === "object" ? "array" : "object");
+    },
+    [inputs]
+  );
+
   return [
     selective ? inputs[selective] : inputs,
     setState,
-    { isValid: formIsValid, reset }
+    {
+      isValid: formIsValid,
+      reset,
+      ...(type === "object" ? { toArray: formT } : { toObject: formT })
+    }
   ];
 }
 
 function asyncChange(
+  helper: Helper,
   input: Input,
   value: ValuesType,
   setState: any,
@@ -71,6 +96,7 @@ function asyncChange(
   toValidate: ObjState
 ) {
   validateAsync(
+    helper,
     toValidate,
     input.id as string,
     value,
@@ -82,6 +108,7 @@ function asyncChange(
             : transform(prevState.inputs, "object");
         // revalidate input
         const { isValid, errorMessage } = validate(
+          helper,
           clonedData,
           input.id as string,
           clonedData[input.id as string].value
@@ -103,6 +130,7 @@ function asyncChange(
 }
 
 function onChange(
+  helper: Helper,
   input: Input,
   value: ValuesType,
   setState: any,
@@ -114,6 +142,7 @@ function onChange(
         ? { ...prevState.inputs }
         : transform(prevState.inputs, "object");
     const { isValid, errorMessage } = validate(
+      helper,
       clonedData,
       input.id as string,
       value
@@ -135,7 +164,7 @@ function onChange(
       : false;
 
     if (isValid && input.validation?.async) {
-      asyncChange(input, value, setState, type, clonedData);
+      asyncChange(helper, input, value, setState, type, clonedData);
     }
 
     return {
