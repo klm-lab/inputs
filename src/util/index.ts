@@ -1,11 +1,13 @@
 import type {
   Input,
   MatchResultType,
+  MergeType,
   ObjState,
   StateType,
   ValidationStateType
 } from "../types";
-import { deepMatch } from "../validation";
+import { deepMatch, parseCopy } from "../validation";
+import type { Helper } from "./helper";
 
 function initValidAndTouch(entry: Input, resetValue?: any) {
   const validation = entry.validation;
@@ -50,55 +52,97 @@ function common(entry: Input) {
   };
 }
 
-const setTrackingMatching = (entry: Input, matchKey: string[]) => {
-  if (entry.validation?.__) {
-    return [...new Set([...entry.validation.__, ...matchKey])];
+const setTrackingMatching = (
+  helper: Helper,
+  target: string,
+  matchKey: string[]
+) => {
+  if (helper.trackingMatch[target]) {
+    return [...new Set([...helper.trackingMatch[target], ...matchKey])];
   } else {
     return matchKey;
   }
 };
 
-// Loop validation
-const lV = (state: ValidationStateType, data: ValidationStateType) => {
-  for (const dataKey in data) {
-    const key = dataKey as keyof ValidationStateType;
-    if (
-      state[key] &&
-      state[key].constructor.name === "Object" &&
-      data[key].constructor.name === "Object"
-    ) {
-      state[key] = {
-        ...state[key],
-        ...data[key]
-      };
-    } else {
-      state[key] = data[key];
+/*
+ * Loop validation and merge.
+ * Merge help preserve value that present in the state and not in the data
+ * */
+const merge = (
+  state: ValidationStateType,
+  data: ValidationStateType,
+  mergeProps?: MergeType
+) => {
+  const { omit, keyPath } = mergeProps || {
+    omit: new Set<keyof ValidationStateType>()
+  };
+  for (const key in data) {
+    // We give priority to the data
+    if (keyPath === "copy") {
+      if (
+        state[key as keyof ValidationStateType]?.constructor.name ===
+          "Object" &&
+        data[key as keyof ValidationStateType]?.constructor.name === "Object"
+      ) {
+        state[key as keyof ValidationStateType] = {
+          ...state[key as keyof ValidationStateType],
+          ...data[key as keyof ValidationStateType]
+        };
+      } else {
+        state[key as keyof ValidationStateType] =
+          data[key as keyof ValidationStateType];
+      }
+    }
+    // We give priority to the last matched result
+    if (keyPath === "match" && state[key as keyof ValidationStateType]) {
+      if (
+        state[key as keyof ValidationStateType]?.constructor.name ===
+          "Object" &&
+        data[key as keyof ValidationStateType]?.constructor.name === "Object"
+      ) {
+        state[key as keyof ValidationStateType] = {
+          value: state[key as keyof ValidationStateType].value,
+          message:
+            data[key as keyof ValidationStateType].message ??
+            state[key as keyof ValidationStateType].message
+        };
+      }
+      if (
+        state[key as keyof ValidationStateType]?.constructor.name !==
+          "Object" &&
+        data[key as keyof ValidationStateType]?.constructor.name === "Object"
+      ) {
+        state[key as keyof ValidationStateType] = {
+          value: state[key as keyof ValidationStateType],
+          message: data[key as keyof ValidationStateType].message
+        };
+      }
     }
   }
+
+  omit?.forEach((k: keyof ValidationStateType) => {
+    delete state[k];
+  });
+
   return state;
 };
 
 // Match and copy input validation
 const mcv = (
+  helper: Helper,
   state: ObjState,
   stateKey: string,
   matchOrCopyKey: string,
   keyPath: keyof ValidationStateType
 ) => {
-  /*
-   * We create a match result with default value.
-   * All matchKeys = [], lastMatched = current matchKey
-   * validation: current MatchKey validation
-   * */
   let matchResult = {} as MatchResultType;
-
   /*
-   * We check if the matched input also match someone until find the last one who does have a match property
+   * We check if the matched input also match someone until find the last one who doesn't have a match property
    * and use last not matched validation to match all input in the hierarchy.
-   * We add __ for validation tool. See validate function in validation folder
+   * We add trackMatching for validation tool. See validate function in validation folder
    * */
   try {
-    matchResult = deepMatch(state, matchOrCopyKey, keyPath);
+    matchResult = deepMatch(helper, state, stateKey, matchOrCopyKey, keyPath);
   } catch (_) {
     throw Error(
       "It seems that we have infinite match here. Please make sure that the last matched or copied input does not match or copy anyone"
@@ -106,85 +150,75 @@ const mcv = (
   }
 
   /*
-   * For every matched key , We set two properties with deepMatch
-   * - lastMatched input validation
-   * - __. this is the tracking matching property
-   * The input validation is the validation defined by the user (We just want to keep the match key of the user)
-   * We add our result validation and for trackMatching, we put the current matched input, all matchKeys found without the value itself and the last matched.
-   * For example. if an input match firstname and firstname match username and username match something,
-   * the result of the matchKeys for that input is ["firstname", "username"] and lastMatched is something.
-   * We loop through the result and set trackMatching to ["current matched",custom,"something"]
-   * custom is username if one of the result is firstname and firstname if one the result is username.
-   * We don't want an input to match himself.
-   *
-   * For copy, we not add tracking, but we merge resultValidation with current validation
+   * Mmv is merge matched validation
+   * We merge resultValidation with all matched validation
    * */
+  let mmv: ValidationStateType = {};
+
   matchResult.matchKeys.forEach((v) => {
+    mmv = merge(mmv, helper.state[v].validation as ValidationStateType, {
+      keyPath
+    });
+
+    // We updated every matched input found with the appropriate validation
     state[v].validation = {
-      ...lV(
+      ...merge(
         { ...matchResult.validation },
-        state[v].validation as ValidationStateType
-      ),
-      ...(keyPath === "match"
-        ? {
-            __: setTrackingMatching(state[v], [
-              stateKey,
-              ...matchResult.matchKeys.filter((value) => value !== v),
-              matchResult.lastMatched
-            ])
-          }
-        : {
-            // ...state[v].validation
-          })
+        state[v].validation as ValidationStateType,
+        { omit: helper.omittedKeys[v], keyPath }
+      )
     };
+
+    if (keyPath === "match") {
+      // Setting the trackMatching for every matched key
+      helper.trackingMatch[v] = setTrackingMatching(helper, v, [
+        stateKey,
+        ...matchResult.matchKeys.filter((value) => value !== v),
+        matchResult.lastMatched
+      ]);
+    }
   });
 
-  /*
-   * For the current input, we populate our __ (tracking matching) and keep it own validation
-   * ["firstname","username","something"]. For copy, we not add tracking
-   * but we merge resultValidation with current validation
-   * */
+  // We updated the current input with the appropriate validation
   state[stateKey].validation = {
-    ...lV(
-      lV(
-        { ...matchResult.validation },
-        state[matchOrCopyKey].validation as ValidationStateType
-      ),
-      state[stateKey].validation as ValidationStateType
+    ...merge(
+      merge({ ...matchResult.validation }, mmv, {
+        omit: helper.omittedKeys[stateKey],
+        keyPath
+      }),
+      state[stateKey].validation as ValidationStateType,
+      {
+        keyPath
+      }
     ),
     ...(keyPath === "match"
       ? {
-          match: matchOrCopyKey,
-          __: setTrackingMatching(state[stateKey], [
-            ...matchResult.matchKeys,
-            matchResult.lastMatched
-          ])
+          match: matchOrCopyKey
         }
       : {
-          copy: matchOrCopyKey
+          copy: helper.state[stateKey].validation?.copy
         })
-  };
+  } as ValidationStateType;
 
-  // we use ___ because, the errorMessage is dynamic, and we need to fall back to the original if needed
-  state[stateKey].___ =
+  if (keyPath === "match") {
+    // Setting the trackMatching for current key
+    helper.trackingMatch[stateKey] = setTrackingMatching(helper, stateKey, [
+      ...matchResult.matchKeys,
+      matchResult.lastMatched
+    ]);
+    // Setting the trackMatching for last matched
+    helper.trackingMatch[matchResult.lastMatched] = setTrackingMatching(
+      helper,
+      matchResult.lastMatched,
+      [stateKey, ...matchResult.matchKeys]
+    );
+  }
+
+  // We save the error message because, the errorMessage is dynamic, and we need to fall back to the original if needed
+  helper.errorMessage[stateKey] =
     state[stateKey].errorMessage ??
     state[matchOrCopyKey].errorMessage ??
     state[matchResult.lastMatched].errorMessage;
-
-  /*
-   * For the last matched, we keep his validation and add out trackingMatching prop __
-   * */
-  state[matchResult.lastMatched].validation = {
-    ...matchResult.validation,
-    ...(keyPath === "match"
-      ? {
-          __: setTrackingMatching(state[matchResult.lastMatched], [
-            stateKey,
-            ...matchResult.matchKeys
-          ])
-        }
-      : {})
-  };
 
   return state;
 };
@@ -201,26 +235,23 @@ const mcv = (
  *    },
  *    confirmPassword: {validation: {match: "password"}}
  * }.
- * We need to copy all validation from password and paste it to confirmPassword. We need also to add
- * match: "confirmPassword" to the password key. So the validation system can run the same validate of both id
  *
  */
-const matchRules = (state: ObjState) => {
-  let mappedState: ObjState = { ...state };
-
+const matchRules = (state: ObjState, helper: Helper) => {
   for (const stateKey in state) {
     // we save the error message
-    mappedState[stateKey].___ = state[stateKey].errorMessage;
-    // We create an input key
-    mappedState[stateKey].key = crypto.randomUUID();
-
-    /*  We are trying to see
-     *  for example if an input want to copy validation from another input
-     **/
+    helper.errorMessage[stateKey] = state[stateKey].errorMessage;
+    // If an input want to copy validation from another input
     const copyKey = state[stateKey].validation?.copy;
 
     if (copyKey) {
-      mappedState = mcv(state, stateKey, copyKey, "copy");
+      state = mcv(
+        helper,
+        state,
+        stateKey,
+        parseCopy(copyKey, "copy").value,
+        "copy"
+      );
     }
 
     /*  We get the key to match with, we are trying to see
@@ -234,10 +265,10 @@ const matchRules = (state: ObjState) => {
      * state.confirmPassword.validate.match exists
      */
     if (matchKey) {
-      mappedState = mcv(state, stateKey, matchKey, "match");
+      state = mcv(helper, state, stateKey, matchKey, "match");
     }
   }
-  return { ...mappedState };
+  return state;
 };
 
 const stateIsValid = (data: ObjState) => {
