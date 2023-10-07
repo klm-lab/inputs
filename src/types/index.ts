@@ -24,7 +24,7 @@ type HTMLInputTypeAttribute =
   | "time"
   | "url"
   | "week"
-  | (string & {});
+  | string;
 
 type ValuesType = any;
 
