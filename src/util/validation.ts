@@ -5,10 +5,10 @@ import type {
   MatchResultType,
   ObjState,
   ValidationStateType,
-  ValuesType
+  ValuesType,
+  CopyKeyObjType
 } from "../types";
-import { CopyKeyObjType } from "../types";
-import type { Helper } from "../util/helper";
+import type { H } from "./helper";
 
 const validateEmail = (email: string) => {
   const re =
@@ -16,7 +16,8 @@ const validateEmail = (email: string) => {
   return re.test(String(email).toLowerCase());
 };
 
-const parseCopy = (
+// Pc is parse copy
+const pc = (
   key: CopyType | undefined | string,
   keyPath: keyof ValidationStateType
 ): CopyKeyObjType => {
@@ -38,8 +39,9 @@ const parseCopy = (
   };
 };
 
-const deepMatch = (
-  helper: Helper,
+// Deep match
+const dp = (
+  helper: H,
   state: ObjState,
   stateKey: string,
   matchKey: string,
@@ -47,14 +49,11 @@ const deepMatch = (
 ) => {
   const matchKeys: string[] = [];
   let result = {} as MatchResultType;
-  helper.omittedKeys[stateKey] = parseCopy(
-    state[stateKey].validation?.copy,
-    keyPath
-  ).omit;
+  helper.ok[stateKey] = pc(state[stateKey].validation?.copy, keyPath).omit;
 
   const match = (matchKey: string, keyPath: keyof ValidationStateType) => {
     // We get omitted path from user
-    const userOmit = parseCopy(state[stateKey].validation?.copy, keyPath).omit;
+    const userOmit = pc(state[stateKey].validation?.copy, keyPath).omit;
 
     if (
       // state[matchKey] exists
@@ -72,13 +71,13 @@ const deepMatch = (
          * If an input omit a validation and match another input who omit another validation,
          * then both omit same validations
          *  */
-        ...parseCopy(state[matchKey].validation?.copy, keyPath).omit,
+        ...pc(state[matchKey].validation?.copy, keyPath).omit,
         ...userOmit
       ]).forEach((k) => {
         // We save omitted path for the current key
-        helper.omittedKeys[stateKey].add(k);
+        helper.ok[stateKey].add(k);
         // if custom is omitted, then we remove async to avoid delay on validation
-        k === "custom" && helper.omittedKeys[stateKey].add("async");
+        k === "custom" && helper.ok[stateKey].add("async");
       });
       matchKeys.push(matchKey as string);
       // Next round with a new matchKey
@@ -86,7 +85,7 @@ const deepMatch = (
     } else {
       // By default, validation is the original validation of the last matched key
       let validation: ValidationStateType | undefined = {
-        ...helper.state[matchKey].validation
+        ...helper.s[matchKey].validation
       };
       /* If we want the copied part or the matched part, we override the validation with
        * the validation of the last matched found already updated while looping
@@ -94,7 +93,7 @@ const deepMatch = (
       if (!userOmit.has("copy") && !userOmit.has("match")) {
         validation = state[matchKey] ? state[matchKey].validation : {};
       }
-      result = { lastMatched: matchKey, matchKeys, validation };
+      result = { lm: matchKey, mk: matchKeys, v: validation };
     }
   };
 
@@ -103,76 +102,69 @@ const deepMatch = (
   return result;
 };
 
-const getErrorMessage = (helper: Helper, rule: any, target: string) => {
+const getErrorMessage = (helper: H, rule: any, target: string) => {
   if (rule && rule?.constructor.name === "Object") {
-    return rule.message ?? helper.errorMessage[target];
+    return rule.message ?? helper.em[target];
   }
-  return helper.errorMessage[target];
+  return helper.em[target];
 };
 
 const getValue = (rule: any) => {
   return rule?.constructor.name === "Object" ? rule.value : rule;
 };
 
-const validate = (
-  helper: Helper,
-  state: ObjState,
-  target: string,
-  value: ValuesType
-) => {
+// V is validate
+const v = (helper: H, state: ObjState, target: string, value: ValuesType) => {
   const entry: Input = state[target];
   const rules: ValidationStateType = entry.validation || {};
-  let isValid: boolean = true;
-  const errorMessage: ErrorMessageType | undefined =
-    helper.errorMessage[target];
+  let valid: boolean = true;
+  const em: ErrorMessageType | undefined = helper.em[target];
 
   // Required
   if (typeof rules.required !== "undefined") {
-    isValid =
+    valid =
       typeof value === "string"
-        ? value.trim() !== "" && isValid
-        : value !== null && isValid;
+        ? value.trim() !== "" && valid
+        : value !== null && valid;
   }
-  if (!isValid) {
+  if (!valid) {
     return {
-      isValid,
-      errorMessage: getErrorMessage(helper, rules.required, target)
+      valid,
+      em: getErrorMessage(helper, rules.required, target)
     };
   }
 
   // Starts with
   if (typeof rules?.startsWith !== "undefined" && typeof value === "string") {
-    isValid =
-      value.length > 0 &&
-      value.startsWith(getValue(rules.startsWith)) &&
-      isValid;
+    valid =
+      value.length > 0 && value.startsWith(getValue(rules.startsWith)) && valid;
   }
-  if (!isValid) {
+  if (!valid) {
     return {
-      isValid,
-      errorMessage: getErrorMessage(helper, rules.startsWith, target)
+      valid,
+      em: getErrorMessage(helper, rules.startsWith, target)
     };
   }
 
   // Min
   if (typeof rules.min !== "undefined" && typeof value === "number") {
-    isValid = value >= getValue(rules.min) && isValid;
+    valid = value >= getValue(rules.min) && valid;
   }
-  if (!isValid) {
+  if (!valid) {
     return {
-      isValid,
-      errorMessage: getErrorMessage(helper, rules.min, target)
+      valid,
+      em: getErrorMessage(helper, rules.min, target)
     };
   }
 
   // MinLength
   if (typeof rules.minLength !== "undefined" && value) {
-    isValid = value?.length >= getValue(rules.minLength) && isValid;
+    valid = value?.length >= getValue(rules.minLength) && valid;
   }
-  if (!isValid) {
+  if (!valid) {
     return {
-      isValid,
-      errorMessage: getErrorMessage(helper, rules.minLength, target)
+      valid,
+      em: getErrorMessage(helper, rules.minLength, target)
     };
   }
 
@@ -181,26 +173,26 @@ const validate = (
     typeof rules.minLengthWithoutSpace !== "undefined" &&
     typeof value === "string"
   ) {
-    isValid =
+    valid =
       value.indexOf(" ") === -1 &&
       value.trim().length >= getValue(rules.minLengthWithoutSpace) &&
-      isValid;
+      valid;
   }
-  if (!isValid) {
+  if (!valid) {
     return {
-      isValid,
-      errorMessage: getErrorMessage(helper, rules.minLengthWithoutSpace, target)
+      valid,
+      em: getErrorMessage(helper, rules.minLengthWithoutSpace, target)
     };
   }
 
   // MaxLength
   if (typeof rules.maxLength !== "undefined" && value) {
-    isValid = value?.length <= getValue(rules.maxLength) && isValid;
+    valid = value?.length <= getValue(rules.maxLength) && valid;
   }
-  if (!isValid) {
+  if (!valid) {
     return {
-      isValid,
-      errorMessage: getErrorMessage(helper, rules.maxLength, target)
+      valid,
+      em: getErrorMessage(helper, rules.maxLength, target)
     };
   }
 
@@ -209,95 +201,84 @@ const validate = (
     typeof rules.maxLengthWithoutSpace !== "undefined" &&
     typeof value === "string"
   ) {
-    isValid =
+    valid =
       value.indexOf(" ") === -1 &&
       value.trim().length <= getValue(rules.maxLengthWithoutSpace) &&
-      isValid;
+      valid;
   }
-  if (!isValid) {
+  if (!valid) {
     return {
-      isValid,
-      errorMessage: getErrorMessage(helper, rules.maxLengthWithoutSpace, target)
+      valid,
+      em: getErrorMessage(helper, rules.maxLengthWithoutSpace, target)
     };
   }
 
   // Max
   if (typeof rules.max !== "undefined" && typeof value === "number") {
-    isValid = value <= getValue(rules.max) && isValid;
+    valid = value <= getValue(rules.max) && valid;
   }
-  if (!isValid) {
+  if (!valid) {
     return {
-      isValid,
-      errorMessage: getErrorMessage(helper, rules.max, target)
+      valid,
+      em: getErrorMessage(helper, rules.max, target)
     };
   }
 
   // Number
   if (typeof rules.number !== "undefined") {
-    isValid = typeof value === "number" && isValid;
+    valid = typeof value === "number" && valid;
   }
-  if (!isValid) {
+  if (!valid) {
     return {
-      isValid,
-      errorMessage: getErrorMessage(helper, rules.number, target)
+      valid,
+      em: getErrorMessage(helper, rules.number, target)
     };
   }
 
   // Email
   if (typeof rules.email !== "undefined" && typeof value === "string") {
-    isValid = validateEmail(value) && isValid;
+    valid = validateEmail(value) && valid;
   }
-  if (!isValid) {
+  if (!valid) {
     return {
-      isValid,
-      errorMessage: getErrorMessage(helper, rules.email, target)
-    };
-  }
-
-  // Equals to
-  if (typeof rules?.equalsTo !== "undefined") {
-    isValid = value === getValue(rules.equalsTo) && isValid;
-  }
-  if (!isValid) {
-    return {
-      isValid,
-      errorMessage: getErrorMessage(helper, rules.equalsTo, target)
+      valid,
+      em: getErrorMessage(helper, rules.email, target)
     };
   }
 
   // Regex
   if (typeof rules.regex !== "undefined") {
-    isValid = getValue(rules.regex)?.test(value) && isValid;
+    valid = getValue(rules.regex)?.test(value) && valid;
   }
-  if (!isValid) {
+  if (!valid) {
     return {
-      isValid,
-      errorMessage: getErrorMessage(helper, rules.regex, target)
+      valid,
+      em: getErrorMessage(helper, rules.regex, target)
     };
   }
 
   // ends with
   if (typeof rules?.endsWith !== "undefined" && typeof value === "string") {
-    isValid =
-      value.length > 0 && value.endsWith(getValue(rules.endsWith)) && isValid;
+    valid =
+      value.length > 0 && value.endsWith(getValue(rules.endsWith)) && valid;
   }
-  if (!isValid) {
+  if (!valid) {
     return {
-      isValid,
-      errorMessage: getErrorMessage(helper, rules.endsWith, target)
+      valid,
+      em: getErrorMessage(helper, rules.endsWith, target)
     };
   }
 
   // if (typeof rules.__ !== "undefined") {
-  if (typeof helper.trackingMatch[target] !== "undefined") {
+  if (typeof helper.tm[target] !== "undefined") {
     /*  We get the match key here.
      * For example, if we are typing in password, then matchKeys is confirmPassword
      * f we are typing in confirmPassword then matchKeys is password and so on
      */
-    const matchKeys = helper.trackingMatch[target];
+    const matchKeys = helper.tm[target];
 
     /*  We save the current valid value which comes from top functions with validation rules.*/
-    let currentInputValidStatus: boolean = isValid;
+    let currentInputValidStatus: boolean = valid;
     /*
      * We loop and check if typed value match all matched key value and break the loop.
      * But before breaking loop, we override the currentInputValidStatus status with the new one
@@ -323,34 +304,35 @@ const validate = (
     }
     if (!currentInputValidStatus) {
       return {
-        isValid: currentInputValidStatus,
-        errorMessage: getErrorMessage(helper, rules.match, target)
+        valid: currentInputValidStatus,
+        em: getErrorMessage(helper, rules.match, target)
       };
     }
   }
   if (!entry.validation?.async && typeof rules.custom !== "undefined") {
     let eM: ErrorMessageType | null = null;
-    isValid = rules.custom(value, (m: ErrorMessageType) => (eM = m)) as boolean;
-    if ((typeof isValid as unknown) !== "boolean") {
+    valid = rules.custom(value, (m: ErrorMessageType) => (eM = m)) as boolean;
+    if ((typeof valid as unknown) !== "boolean") {
       throw Error("Your custom response is not a boolean");
     }
-    if (!isValid) {
-      return { isValid, errorMessage: eM ?? helper.errorMessage[target] };
+    if (!valid) {
+      return { valid, em: eM ?? helper.em[target] };
     }
   }
-  return { isValid, errorMessage };
+  return { valid, em };
 };
 
-const validateAsync = (
-  helper: Helper,
+// Async validation
+const va = (
+  helper: H,
   state: any,
   target: string,
   value: any,
   callback: any
 ) => {
   const entry: Input = state[target];
-  clearTimeout(helper.asyncId[entry.key as string]);
-  helper.asyncId[entry.key as string] = setTimeout(() => {
+  clearTimeout(helper.a[entry.key as string]);
+  helper.a[entry.key as string] = setTimeout(() => {
     const rules: ValidationStateType = entry.validation || {};
     if (typeof rules.custom !== "undefined") {
       let eM: ErrorMessageType | null = null;
@@ -363,7 +345,7 @@ const validateAsync = (
           }
           callback({
             valid: value as boolean,
-            errorMessage: eM ?? helper.errorMessage[target]
+            em: eM ?? helper.em[target]
           });
         })
         .catch((error: any) => {
@@ -375,4 +357,4 @@ const validateAsync = (
   }, 800);
 };
 
-export { validate, deepMatch, validateAsync, getValue, parseCopy };
+export { v, dp, va, getValue, pc };

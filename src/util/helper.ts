@@ -1,63 +1,67 @@
 import type { ErrorMessageType, ObjState, ValidationStateType } from "../types";
 
-class Helper {
-  get asyncId(): { [k in string]: any } {
-    return this._asyncId;
+class H {
+  get a(): { [k in string]: any } {
+    return this._a;
   }
 
-  set asyncId(value: { [k in string]: any }) {
-    this._asyncId = value;
+  set a(value: { [k in string]: any }) {
+    this._a = value;
   }
 
-  get trackingMatch(): { [k in string]: string[] } {
-    return this._trackingMatch;
+  get tm(): { [k in string]: string[] } {
+    return this._tm;
   }
 
-  set trackingMatch(value: { [k in string]: string[] }) {
-    this._trackingMatch = value;
+  set tm(value: { [k in string]: string[] }) {
+    this._tm = value;
   }
 
-  get errorMessage(): { [k in string]: ErrorMessageType | undefined } {
-    return this._errorMessage;
+  get em(): { [k in string]: ErrorMessageType | undefined } {
+    return this._em;
   }
 
-  set errorMessage(value: { [k in string]: ErrorMessageType | undefined }) {
-    this._errorMessage = value;
+  set em(value: { [k in string]: ErrorMessageType | undefined }) {
+    this._em = value;
   }
 
-  get state(): ObjState {
-    return this._state;
+  get s(): ObjState {
+    return this._s;
   }
 
-  set state(value: ObjState) {
-    this._state = value;
+  set s(value: ObjState) {
+    this._s = value;
   }
 
-  get omittedKeys(): { [k in string]: Set<keyof ValidationStateType> } {
-    return this._omittedKeys;
+  get ok(): { [k in string]: Set<keyof ValidationStateType> } {
+    return this._ok;
   }
 
-  set omittedKeys(value: { [k in string]: Set<keyof ValidationStateType> }) {
-    this._omittedKeys = value;
+  set ok(value: { [k in string]: Set<keyof ValidationStateType> }) {
+    this._ok = value;
   }
-
-  private _omittedKeys: { [k in string]: Set<keyof ValidationStateType> };
-  private _errorMessage: { [k in string]: ErrorMessageType | undefined };
-  private _trackingMatch: { [k in string]: string[] };
-  private _state: ObjState;
-  private _asyncId: { [k in string]: any };
+  // Omitted keys
+  private _ok: { [k in string]: Set<keyof ValidationStateType> };
+  // Saved error message
+  private _em: { [k in string]: ErrorMessageType | undefined };
+  // tracking matching
+  private _tm: { [k in string]: string[] };
+  // cloned state
+  private _s: ObjState;
+  // async custom throttle
+  private _a: { [k in string]: any };
 
   constructor() {
-    this._omittedKeys = {};
-    this._state = {};
-    this._errorMessage = {};
-    this._trackingMatch = {};
-    this._asyncId = {};
+    this._ok = {};
+    this._s = {};
+    this._em = {};
+    this._tm = {};
+    this._a = {};
   }
 
   clean(s: ObjState) {
-    this.omittedKeys = {};
-    this.state = {};
+    this.ok = {};
+    this.s = {};
     for (const sKey in s) {
       delete s[sKey].validation?.copy;
       delete s[sKey].validation?.match;
@@ -66,4 +70,4 @@ class Helper {
   }
 }
 
-export { Helper };
+export { H };

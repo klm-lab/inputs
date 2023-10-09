@@ -368,7 +368,7 @@ It is very useful for example password validation.<br>
 > `match` gives priority to the last matched validation among matched inputs. This is the purpose of **matching**. (Share strictly the same validation).<br>
 > But `match` allows you in case validation with specific errorMessage to override the errorMessage and only the errorMessage. Any value found when overriding the errorMessage will simply be ignored.
 
-Let's remove the confusion with an example.
+Let's take an example.
 
 * **Ignored validation when using `match`**
 
@@ -729,7 +729,6 @@ These are automatically added to your state when your call `useInputs`. You can 
 * `copy` The copied input name. `<-- string | {value: string, omit: (Validation properties)[]}`
 * `startsWith` The input will start with that value. `<-- string`
 * `endsWith` The input will end with that value. `<-- string`
-* `equalsTo` The input will be strictly equal to that value. `<-- any`
 * `regex` Your regex validation. `<-- regex`
 * `custom` A function that return a boolean. `<-- (value, set) => boolean or Promise<boolean>`.
 
@@ -748,7 +747,6 @@ These are automatically added to your state when your call `useInputs`. You can 
   all. `<-- {value: number, message: string or object }`
 * `startsWith` The input will start with that value. `<-- {value: string, message: string or object }`
 * `endsWith` The input will end with that value. `<-- {value: string, message: string or object }`
-* `equalsTo` The input will be strictly equal to that value. `<-- {value: any, message: string or object }`
 * `regex` Your regex validation. `<-- {value: regex, message: string or object }`
 
 #### In case of validation with specific message, if it is a boolean, you can omit the value.<br>
@@ -786,7 +784,7 @@ validation: {
 [MIT][license-url]
 
 
-[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-inputs/1.1.1?style=for-the-badge
+[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-inputs/1.1.2?style=for-the-badge
 
 [dependencies-shield]: https://img.shields.io/badge/dependencies-0-green?style=for-the-badge
 

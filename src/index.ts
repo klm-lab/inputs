@@ -7,122 +7,102 @@ import type {
   StringStateOutput,
   ValuesType
 } from "./types";
-import {
-  common,
-  matchRules,
-  resetState,
-  stateIsValid,
-  transform
-} from "./util";
-import { validate, validateAsync } from "./validation";
+import { cm, mr, rs, t, vs } from "./util";
+import { v, va } from "./util/validation";
 import { useCallback, useMemo, useState } from "react";
-import { Helper } from "./util/helper";
+import { H } from "./util/helper";
 
 const populate = (state: any, type: StateType): any => {
   const final = {} as ObjState;
-  const helper = new Helper();
+  const helper = new H();
   for (const stateKey in state) {
     const parseKey = type === "object" ? stateKey : state[stateKey].id;
     const key = crypto.randomUUID();
     const v = {
-      ...common(state[stateKey]),
+      ...cm(state[stateKey]),
       ...state[stateKey],
       ...(type === "object" ? { id: stateKey, key } : { key })
     };
     final[parseKey] = v;
-    helper.state[parseKey] = { ...v };
+    helper.s[parseKey] = { ...v };
   }
-  const s = helper.clean(matchRules(final, helper));
-  return [
-    type === "object" ? s : transform(s, "array"),
-    stateIsValid(s),
-    helper
-  ];
+  const s = helper.clean(mr(final, helper));
+  return [type === "object" ? s : t(s, "array"), vs(s), helper];
 };
 
-function inputs(initialState: any, type: StateType, selective?: string) {
+const inputs = (initialState: any, type: StateType, selective?: string) => {
   const [entry, valid, helper] = useMemo(
     () => populate(initialState, type),
     []
   );
 
-  const [{ inputs, formIsValid }, setInputs] = useState({
-    inputs: entry,
-    formIsValid: valid
-  });
-  const setState = useCallback(function (input: Input, value: ValuesType) {
+  // Fv is form is valid
+  // 'i' is inputs
+  const [{ i, fv }, setInputs] = useState({ i: entry, fv: valid });
+  const setState = useCallback((input: Input, value: ValuesType) => {
     return onChange(
       helper,
-      selective ? inputs[selective] : input,
+      selective ? i[selective] : input,
       selective ? input : value,
       setInputs,
       type
     );
   }, []);
 
-  const reset = useCallback(function () {
+  const reset = useCallback(() => {
     setInputs((prevState: any) => {
-      return {
-        inputs: resetState(prevState.inputs, type),
-        formIsValid: false
-      };
+      return { i: rs(prevState.i, type), fv: false };
     });
   }, []);
 
-  const formT = useCallback(
-    function () {
-      return transform(inputs, type === "object" ? "array" : "object");
-    },
-    [inputs]
-  );
+  const formT = useCallback(() => {
+    return t(i, type === "object" ? "array" : "object");
+  }, [i]);
 
   return [
-    selective ? inputs[selective] : inputs,
+    selective ? i[selective] : i,
     setState,
     {
-      isValid: formIsValid,
+      isValid: fv,
       reset,
       ...(type === "object" ? { toArray: formT } : { toObject: formT })
     }
   ];
-}
+};
 
 function asyncChange(
-  helper: Helper,
+  helper: H,
   input: Input,
   value: ValuesType,
   setState: any,
   type: StateType,
   toValidate: ObjState
 ) {
-  validateAsync(
+  va(
     helper,
     toValidate,
     input.id as string,
     value,
-    ({ valid: asyncValid, errorMessage: asyncErrorMessage }: any) => {
+    ({ valid: asyncValid, em: asyncErrorMessage }: any) => {
       setState((prevState: any) => {
         const clonedData =
-          type === "object"
-            ? { ...prevState.inputs }
-            : transform(prevState.inputs, "object");
+          type === "object" ? { ...prevState.i } : t(prevState.i, "object");
         // revalidate input
-        const { isValid, errorMessage } = validate(
+        const { valid, em } = v(
           helper,
           clonedData,
           input.id as string,
           clonedData[input.id as string].value
         );
 
-        clonedData[input.id as string].valid = isValid && asyncValid;
-        clonedData[input.id as string].errorMessage = isValid
+        clonedData[input.id as string].valid = valid && asyncValid;
+        clonedData[input.id as string].errorMessage = valid
           ? asyncErrorMessage
-          : errorMessage;
+          : em;
         clonedData[input.id as string].validating = false;
         return {
-          inputs:
-            type === "object" ? clonedData : transform(clonedData, "array"),
-          formIsValid: stateIsValid(clonedData)
+          i: type === "object" ? clonedData : t(clonedData, "array"),
+          fv: vs(clonedData)
         };
       });
     }
@@ -130,7 +110,7 @@ function asyncChange(
 }
 
 function onChange(
-  helper: Helper,
+  helper: H,
   input: Input,
   value: ValuesType,
   setState: any,
@@ -138,38 +118,31 @@ function onChange(
 ) {
   setState((prevState: any) => {
     const clonedData =
-      type === "object"
-        ? { ...prevState.inputs }
-        : transform(prevState.inputs, "object");
-    const { isValid, errorMessage } = validate(
-      helper,
-      clonedData,
-      input.id as string,
-      value
-    );
+      type === "object" ? { ...prevState.i } : t(prevState.i, "object");
+    const { valid, em } = v(helper, clonedData, input.id as string, value);
     clonedData[input.id as string].value = value;
     clonedData[input.id as string].touched = true;
     clonedData[input.id as string].valid = input.validation?.async
       ? false
-      : isValid;
-    clonedData[input.id as string].errorMessage = errorMessage;
+      : valid;
+    clonedData[input.id as string].errorMessage = em;
     /* if it is valid then if async is true, we set validating to true otherwise false
      * valid === false mean no need to call async,
      * valid === true means we can call async if async is set to true by the user.
      *
      * validating prop is responsible to show async validation loading
      * */
-    clonedData[input.id as string].validating = isValid
+    clonedData[input.id as string].validating = valid
       ? !!input.validation?.async
       : false;
 
-    if (isValid && input.validation?.async) {
+    if (valid && input.validation?.async) {
       asyncChange(helper, input, value, setState, type, clonedData);
     }
 
     return {
-      formIsValid: stateIsValid(clonedData),
-      inputs: type === "object" ? clonedData : transform(clonedData, "array")
+      fv: vs(clonedData),
+      i: type === "object" ? clonedData : t(clonedData, "array")
     };
   });
 }

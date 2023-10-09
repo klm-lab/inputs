@@ -6,8 +6,8 @@ import type {
   StateType,
   ValidationStateType
 } from "../types";
-import { deepMatch, parseCopy } from "../validation";
-import type { Helper } from "./helper";
+import { dp, pc } from "./validation";
+import type { H } from "./helper";
 
 function initValidAndTouch(entry: Input, resetValue?: any) {
   const validation = entry.validation;
@@ -22,7 +22,8 @@ function initValidAndTouch(entry: Input, resetValue?: any) {
   return !["", 0, null, undefined].includes(resetValue ?? value);
 }
 
-const resetState = (formData: any, type: StateType): any => {
+// reset state
+const rs = (formData: any, type: StateType): any => {
   const data = type === "object" ? { ...formData } : [...formData];
   for (const key in data) {
     const result = data[key].resetValue
@@ -38,7 +39,8 @@ const resetState = (formData: any, type: StateType): any => {
   return data;
 };
 
-function common(entry: Input) {
+// Spread common props
+function cm(entry: Input) {
   return {
     id: entry.id,
     name: entry.name ?? "",
@@ -52,13 +54,9 @@ function common(entry: Input) {
   };
 }
 
-const setTrackingMatching = (
-  helper: Helper,
-  target: string,
-  matchKey: string[]
-) => {
-  if (helper.trackingMatch[target]) {
-    return [...new Set([...helper.trackingMatch[target], ...matchKey])];
+const setTrackingMatching = (helper: H, target: string, matchKey: string[]) => {
+  if (helper.tm[target]) {
+    return [...new Set([...helper.tm[target], ...matchKey])];
   } else {
     return matchKey;
   }
@@ -129,7 +127,7 @@ const merge = (
 
 // Match and copy input validation
 const mcv = (
-  helper: Helper,
+  helper: H,
   state: ObjState,
   stateKey: string,
   matchOrCopyKey: string,
@@ -142,7 +140,7 @@ const mcv = (
    * We add trackMatching for validation tool. See validate function in validation folder
    * */
   try {
-    matchResult = deepMatch(helper, state, stateKey, matchOrCopyKey, keyPath);
+    matchResult = dp(helper, state, stateKey, matchOrCopyKey, keyPath);
   } catch (_) {
     throw Error(
       "It seems that we have infinite match here. Please make sure that the last matched or copied input does not match or copy anyone"
@@ -155,26 +153,26 @@ const mcv = (
    * */
   let mmv: ValidationStateType = {};
 
-  matchResult.matchKeys.forEach((v) => {
-    mmv = merge(mmv, helper.state[v].validation as ValidationStateType, {
+  matchResult.mk.forEach((v) => {
+    mmv = merge(mmv, helper.s[v].validation as ValidationStateType, {
       keyPath
     });
 
     // We updated every matched input found with the appropriate validation
     state[v].validation = {
       ...merge(
-        { ...matchResult.validation },
+        { ...matchResult.v },
         state[v].validation as ValidationStateType,
-        { omit: helper.omittedKeys[v], keyPath }
+        { omit: helper.ok[v], keyPath }
       )
     };
 
     if (keyPath === "match") {
       // Setting the trackMatching for every matched key
-      helper.trackingMatch[v] = setTrackingMatching(helper, v, [
+      helper.tm[v] = setTrackingMatching(helper, v, [
         stateKey,
-        ...matchResult.matchKeys.filter((value) => value !== v),
-        matchResult.lastMatched
+        ...matchResult.mk.filter((value) => value !== v),
+        matchResult.lm
       ]);
     }
   });
@@ -182,8 +180,8 @@ const mcv = (
   // We updated the current input with the appropriate validation
   state[stateKey].validation = {
     ...merge(
-      merge({ ...matchResult.validation }, mmv, {
-        omit: helper.omittedKeys[stateKey],
+      merge({ ...matchResult.v }, mmv, {
+        omit: helper.ok[stateKey],
         keyPath
       }),
       state[stateKey].validation as ValidationStateType,
@@ -196,34 +194,34 @@ const mcv = (
           match: matchOrCopyKey
         }
       : {
-          copy: helper.state[stateKey].validation?.copy
+          copy: helper.s[stateKey].validation?.copy
         })
   } as ValidationStateType;
 
   if (keyPath === "match") {
     // Setting the trackMatching for current key
-    helper.trackingMatch[stateKey] = setTrackingMatching(helper, stateKey, [
-      ...matchResult.matchKeys,
-      matchResult.lastMatched
+    helper.tm[stateKey] = setTrackingMatching(helper, stateKey, [
+      ...matchResult.mk,
+      matchResult.lm
     ]);
     // Setting the trackMatching for last matched
-    helper.trackingMatch[matchResult.lastMatched] = setTrackingMatching(
-      helper,
-      matchResult.lastMatched,
-      [stateKey, ...matchResult.matchKeys]
-    );
+    helper.tm[matchResult.lm] = setTrackingMatching(helper, matchResult.lm, [
+      stateKey,
+      ...matchResult.mk
+    ]);
   }
 
   // We save the error message because, the errorMessage is dynamic, and we need to fall back to the original if needed
-  helper.errorMessage[stateKey] =
+  helper.em[stateKey] =
     state[stateKey].errorMessage ??
     state[matchOrCopyKey].errorMessage ??
-    state[matchResult.lastMatched].errorMessage;
+    state[matchResult.lm].errorMessage;
 
   return state;
 };
 
 /**
+ *  Mr is matching rules
  * We check suspicious validation key and match key which is a typical scenario for password and confirm Password
  * The validation system for matched values need them to both have the validation options.
  * For example, a user enter
@@ -237,21 +235,15 @@ const mcv = (
  * }.
  *
  */
-const matchRules = (state: ObjState, helper: Helper) => {
+const mr = (state: ObjState, helper: H) => {
   for (const stateKey in state) {
     // we save the error message
-    helper.errorMessage[stateKey] = state[stateKey].errorMessage;
+    helper.em[stateKey] = state[stateKey].errorMessage;
     // If an input want to copy validation from another input
     const copyKey = state[stateKey].validation?.copy;
 
     if (copyKey) {
-      state = mcv(
-        helper,
-        state,
-        stateKey,
-        parseCopy(copyKey, "copy").value,
-        "copy"
-      );
+      state = mcv(helper, state, stateKey, pc(copyKey, "copy").value, "copy");
     }
 
     /*  We get the key to match with, we are trying to see
@@ -271,7 +263,8 @@ const matchRules = (state: ObjState, helper: Helper) => {
   return state;
 };
 
-const stateIsValid = (data: ObjState) => {
+// Validate the state
+const vs = (data: ObjState) => {
   let valid = true;
   for (const formKey in data) {
     valid = valid && (data[formKey].valid ?? true);
@@ -281,7 +274,8 @@ const stateIsValid = (data: ObjState) => {
   }
   return valid;
 };
-const transform = (state: any, type: StateType) => {
+// T transform array to object and vice versa
+const t = (state: any, type: StateType) => {
   const result = type === "object" ? {} : ([] as any);
   for (const key in state) {
     if (type === "array") {
@@ -295,4 +289,4 @@ const transform = (state: any, type: StateType) => {
   return result;
 };
 
-export { common, stateIsValid, resetState, matchRules, transform };
+export { cm, vs, rs, mr, t };

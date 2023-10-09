@@ -59,9 +59,12 @@ interface CustomValidationType {
 }
 
 type MatchResultType = {
-  matchKeys: string[];
-  lastMatched: string;
-  validation?: ValidationStateType;
+  // matched keys
+  mk: string[];
+  // Last matched
+  lm: string;
+  // validation
+  v?: ValidationStateType;
 };
 
 type MergeType = {
@@ -74,8 +77,6 @@ type StringOrMap = string | { value: string; message: ErrorMessageType };
 type BooleanOrMap = boolean | { value?: boolean; message: ErrorMessageType };
 
 type NumberOrMap = number | { value: number; message: ErrorMessageType };
-
-type AnyOrMap = any | { value: any; message: ErrorMessageType };
 
 type CopyKeyObjType = { value: string; omit: Set<keyof ValidationStateType> };
 type CopyType = { value: string; omit: (keyof ValidationStateType)[] };
@@ -94,8 +95,7 @@ interface ValidationStateType {
   match?: string;
   startsWith?: StringOrMap;
   endsWith?: StringOrMap;
-  equalsTo?: AnyOrMap;
-  regex?: RegExp;
+  regex?: RegExp & any;
   copy?: CopyType;
   custom?: CustomValidationType;
 }
