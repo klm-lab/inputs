@@ -100,6 +100,25 @@ interface ValidationStateType {
   custom?: CustomValidationType;
 }
 
+interface RequiredValidationStateType {
+  required: BooleanOrMap;
+  async: boolean;
+  email: BooleanOrMap;
+  number: BooleanOrMap;
+  min: NumberOrMap;
+  max: NumberOrMap;
+  minLength: NumberOrMap;
+  minLengthWithoutSpace: NumberOrMap;
+  maxLength: NumberOrMap;
+  maxLengthWithoutSpace: NumberOrMap;
+  match: string;
+  startsWith: StringOrMap;
+  endsWith: StringOrMap;
+  regex: RegExp & any;
+  copy: CopyType;
+  custom: CustomValidationType;
+}
+
 type StringOrObj = string | { [k in string]: string };
 type ErrorMessageType = StringOrObj;
 
@@ -118,20 +137,36 @@ interface Input {
   validation?: ValidationStateType;
   validating?: boolean;
 }
+// FOr some reason, Build-in Required doesn't work
+interface RequiredInput {
+  id: string;
+  name: StringOrObj;
+  type: HTMLInputTypeAttribute;
+  label: StringOrObj;
+  value: ValuesType;
+  resetValue: ValuesType;
+  valid: boolean;
+  touched: boolean;
+  placeholder: StringOrObj;
+  errorMessage: ErrorMessageType;
+  key: string;
+  validation: RequiredValidationStateType;
+  validating: boolean;
+}
 
 type ObjState = {
   [key in string]: Input;
 };
 
 type ObjStateOutput<Key> = [
-  { [k in Key & string]: Required<Input> },
-  (input: Required<Input>, value: any) => void,
+  { [k in Key & string]: RequiredInput },
+  (input: RequiredInput, value: any) => void,
   ObjectForm
 ];
 type StringStateOutput = [Input, (value: any) => void, ObjectForm];
 type ArrayStateOutput = [
-  Required<Input>[],
-  (input: Required<Input>, value: any) => void,
+  RequiredInput[],
+  (input: RequiredInput, value: any) => void,
   ArrayForm
 ];
 
