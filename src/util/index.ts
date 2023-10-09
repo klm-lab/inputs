@@ -43,8 +43,9 @@ const rs = (formData: any, type: StateType): any => {
 function cm(entry: Input) {
   return {
     id: entry.id,
-    name: entry.name ?? "",
-    type: "",
+    name: entry.name ?? entry.id,
+    label: entry.label ?? entry.name ?? entry.id,
+    type: entry.type ?? "text",
     value: "",
     valid: initValidAndTouch(entry),
     touched: initValidAndTouch(entry),

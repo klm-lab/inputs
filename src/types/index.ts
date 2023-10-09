@@ -124,14 +124,14 @@ type ObjState = {
 };
 
 type ObjStateOutput<Key> = [
-  { [k in Key & string]: Input },
-  (input: Input, value: any) => void,
+  { [k in Key & string]: Required<Input> },
+  (input: Required<Input>, value: any) => void,
   ObjectForm
 ];
 type StringStateOutput = [Input, (value: any) => void, ObjectForm];
 type ArrayStateOutput = [
-  Input[],
-  (input: Input, value: any) => void,
+  Required<Input>[],
+  (input: Required<Input>, value: any) => void,
   ArrayForm
 ];
 
