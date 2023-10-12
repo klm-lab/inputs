@@ -265,10 +265,12 @@ const mr = (state: ObjState, helper: H) => {
 };
 
 // Validate the state
+// Set form is valid
 const vs = (data: ObjState) => {
   let valid = true;
   for (const formKey in data) {
-    valid = valid && (data[formKey].valid ?? true);
+    valid =
+      valid && !data[formKey].validating && (data[formKey].valid as boolean);
     if (!valid) {
       break;
     }
