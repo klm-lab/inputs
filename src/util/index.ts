@@ -2,7 +2,7 @@ import type {
   Input,
   MatchResultType,
   MergeType,
-  ObjState,
+  ObjInput,
   StateType,
   ValidationStateType
 } from "../types";
@@ -129,7 +129,7 @@ const merge = (
 // Match and copy input validation
 const mcv = (
   helper: H,
-  state: ObjState,
+  state: ObjInput,
   stateKey: string,
   matchOrCopyKey: string,
   keyPath: keyof ValidationStateType
@@ -236,7 +236,7 @@ const mcv = (
  * }.
  *
  */
-const mr = (state: ObjState, helper: H) => {
+const mr = (state: ObjInput, helper: H) => {
   for (const stateKey in state) {
     // we save the error message
     helper.em[stateKey] = state[stateKey].errorMessage;
@@ -266,7 +266,7 @@ const mr = (state: ObjState, helper: H) => {
 
 // Validate the state
 // Set form is valid
-const vs = (data: ObjState) => {
+const vs = (data: ObjInput) => {
   let valid = true;
   for (const formKey in data) {
     valid =
