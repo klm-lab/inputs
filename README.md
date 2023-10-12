@@ -91,6 +91,17 @@ For available properties, JUMP here <a href="#input-properties">INPUT PROPERTIES
 const [input, setInput] = useInputs([{}, {}])
 ```
 
+Flow or Typescript user who want to define the inputs data in an external file, can import this built-in type for autocomplete support.
+
+```js
+import type {Input} from "aio-inputs";
+
+const myInputsArray: Input[] = [{id: "", label: ""}] // and so on,
+
+// Create your inputs
+const [inputs, setInputs] = useInputs(myInputsArray)
+```
+
 ### Passing an object
 
 Object that doesn't require validation.<br>
@@ -111,6 +122,17 @@ const [input, setInput] = useInputs(
 ```
 
 JUMP here for all properties <a href="#input-properties">INPUT PROPERTIES</a>.
+
+Flow or Typescript user who want to define the inputs data in an external file, can import this built-in type for autocomplete support.
+
+```js
+import type {ObjInput} from "aio-inputs";
+
+const myInputsObject: ObjInput = {name: {id: "", label: ""}} // and so on,
+
+// Create your inputs
+const [inputs, setInputs] = useInputs(myInputsObject)
+```
 
 ### Binding htmlInputElements
 
@@ -579,7 +601,8 @@ const [myInputs, setMyInputs] = useInputs({
 
 * **Asynchronous custom validation**<br>
   For performance purpose, you need to pass `async` property to `true`.
-  Do not worry about multiple calls to the server. We make sure to call the server only when user stops typing.
+  Do not worry about multiple calls to the server. We make sure to call the server only when user stops typing.<br>
+  By default we delay async request by `800` ms. But you can override that value by passing an optional Arguments to `useInputs`. The type is number.
 
 ```js
 const [myInputs, setMyInputs] = useInputs({
@@ -594,13 +617,16 @@ const [myInputs, setMyInputs] = useInputs({
             }
         }
     }
-})
+    // async delay value => 2000
+},2000)
 ```
 
 **What happen if I didn't set `async` property with custom asynchronous validation ?**<br>
 Well, your custom asynchronous validation will not be triggered. Or if triggered, will be treated as a synchronous
 function<br>
 So, do not forget to set `async` to true when using asynchronous validation.
+**What happen if I didn't set `asyncDelay` argument ?**<br>
+The default value will be used. The default value is `800` ms
 
 > [!NOTE]<br>
 > Remove async property if your custom validation is not asynchronous, otherwise, you will notice a delay when
@@ -784,7 +810,7 @@ validation: {
 [MIT][license-url]
 
 
-[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-inputs/1.1.51?style=for-the-badge
+[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-inputs/1.1.6?style=for-the-badge
 
 [dependencies-shield]: https://img.shields.io/badge/dependencies-0-green?style=for-the-badge
 

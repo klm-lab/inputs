@@ -1,4 +1,4 @@
-import type { ErrorMessageType, ObjState, ValidationStateType } from "../types";
+import type { ErrorMessageType, ObjInput, ValidationStateType } from "../types";
 
 class H {
   get a(): { [k in string]: any } {
@@ -25,11 +25,11 @@ class H {
     this._em = value;
   }
 
-  get s(): ObjState {
+  get s(): ObjInput {
     return this._s;
   }
 
-  set s(value: ObjState) {
+  set s(value: ObjInput) {
     this._s = value;
   }
 
@@ -47,7 +47,7 @@ class H {
   // tracking matching
   private _tm: { [k in string]: string[] };
   // cloned state
-  private _s: ObjState;
+  private _s: ObjInput;
   // async custom throttle
   private _a: { [k in string]: any };
 
@@ -59,7 +59,7 @@ class H {
     this._a = {};
   }
 
-  clean(s: ObjState) {
+  clean(s: ObjInput) {
     this.ok = {};
     this.s = {};
     for (const sKey in s) {

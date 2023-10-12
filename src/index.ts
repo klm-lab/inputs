@@ -1,7 +1,7 @@
 import type {
   ArrayStateOutput,
   Input,
-  ObjState,
+  ObjInput,
   ObjStateOutput,
   StateType,
   StringStateOutput,
@@ -13,7 +13,7 @@ import { useCallback, useMemo, useState } from "react";
 import { H } from "./util/helper";
 
 const populate = (state: any, type: StateType): any => {
-  const final = {} as ObjState;
+  const final = {} as ObjInput;
   const helper = new H();
   for (const stateKey in state) {
     const parseKey = type === "object" ? stateKey : state[stateKey].id;
@@ -30,7 +30,12 @@ const populate = (state: any, type: StateType): any => {
   return [type === "object" ? s : t(s, "array"), vs(s), helper];
 };
 
-const inputs = (initialState: any, type: StateType, selective?: string) => {
+const inputs = (
+  initialState: any,
+  type: StateType,
+  asyncDelay: number,
+  selective?: string
+) => {
   const [entry, valid, helper] = useMemo(
     () => populate(initialState, type),
     []
@@ -45,7 +50,8 @@ const inputs = (initialState: any, type: StateType, selective?: string) => {
       selective ? i[selective] : input,
       selective ? input : value,
       setInputs,
-      type
+      type,
+      asyncDelay
     );
   }, []);
 
@@ -76,13 +82,15 @@ function asyncChange(
   value: ValuesType,
   setState: any,
   type: StateType,
-  toValidate: ObjState
+  toValidate: ObjInput,
+  asyncDelay: number
 ) {
   va(
     helper,
     toValidate,
     input.id as string,
     value,
+    asyncDelay,
     ({ valid: asyncValid, em: asyncErrorMessage }: any) => {
       setState((prevState: any) => {
         const clonedData =
@@ -94,7 +102,6 @@ function asyncChange(
           input.id as string,
           clonedData[input.id as string].value
         );
-
         clonedData[input.id as string].valid = valid && asyncValid;
         clonedData[input.id as string].errorMessage = valid
           ? asyncErrorMessage
@@ -114,7 +121,8 @@ function onChange(
   input: Input,
   value: ValuesType,
   setState: any,
-  type: StateType
+  type: StateType,
+  asyncDelay: number
 ) {
   setState((prevState: any) => {
     const clonedData =
@@ -137,7 +145,7 @@ function onChange(
       : false;
 
     if (valid && input.validation?.async) {
-      asyncChange(helper, input, value, setState, type, clonedData);
+      asyncChange(helper, input, value, setState, type, clonedData, asyncDelay);
     }
 
     return {
@@ -147,12 +155,24 @@ function onChange(
   });
 }
 
-function useInputs<S>(initialState: ObjState & S): ObjStateOutput<keyof S>;
-function useInputs(initialState: Input[]): ArrayStateOutput;
-function useInputs(initialState: (string | Input)[]): ArrayStateOutput;
-function useInputs(initialState: string): StringStateOutput;
+function useInputs<S>(
+  initialState: ObjInput & S,
+  asyncDelay?: number
+): ObjStateOutput<keyof S>;
+function useInputs(
+  initialState: Input[],
+  asyncDelay?: number
+): ArrayStateOutput;
+function useInputs(
+  initialState: (string | Input)[],
+  asyncDelay?: number
+): ArrayStateOutput;
+function useInputs(
+  initialState: string,
+  asyncDelay?: number
+): StringStateOutput;
 
-function useInputs(initialState: any): any {
+function useInputs(initialState: any, asyncDelay: number = 800): any {
   if (Array.isArray(initialState)) {
     return inputs(
       initialState.map((entry, i) =>
@@ -162,13 +182,14 @@ function useInputs(initialState: any): any {
           ? entry
           : { id: `input_${i}`, ...entry }
       ),
-      "array"
+      "array",
+      asyncDelay
     );
   }
   if (typeof initialState === "string") {
-    return inputs({ [initialState]: {} }, "object", initialState);
+    return inputs({ [initialState]: {} }, "object", asyncDelay, initialState);
   }
-  return inputs(initialState, "object");
+  return inputs(initialState, "object", asyncDelay);
 }
 
 export { useInputs };

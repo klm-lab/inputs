@@ -3,7 +3,7 @@ import type {
   ErrorMessageType,
   Input,
   MatchResultType,
-  ObjState,
+  ObjInput,
   ValidationStateType,
   ValuesType,
   CopyKeyObjType
@@ -42,7 +42,7 @@ const pc = (
 // Deep match
 const dp = (
   helper: H,
-  state: ObjState,
+  state: ObjInput,
   stateKey: string,
   matchKey: string,
   keyPath: keyof ValidationStateType
@@ -114,7 +114,7 @@ const getValue = (rule: any) => {
 };
 
 // V is validate
-const v = (helper: H, state: ObjState, target: string, value: ValuesType) => {
+const v = (helper: H, state: ObjInput, target: string, value: ValuesType) => {
   const entry: Input = state[target];
   const rules: ValidationStateType = entry.validation || {};
   let valid: boolean = true;
@@ -328,11 +328,14 @@ const va = (
   state: any,
   target: string,
   value: any,
+  asyncDelay: number,
   callback: any
 ) => {
   const entry: Input = state[target];
   clearTimeout(helper.a[entry.key as string]);
   helper.a[entry.key as string] = setTimeout(() => {
+    // Save the time
+    const ST = helper.a[entry.key as string];
     const rules: ValidationStateType = entry.validation || {};
     if (typeof rules.custom !== "undefined") {
       let eM: ErrorMessageType | null = null;
@@ -343,18 +346,26 @@ const va = (
           if (typeof value !== "boolean") {
             throw Error("Your custom response is not a boolean");
           }
-          callback({
-            valid: value as boolean,
-            em: eM ?? helper.em[target]
-          });
+          /* we check if time match the request id time
+           * If not, that means, another request has been sent.
+           * So we wait for that response
+           * */
+          if (ST === helper.a[entry.key as string]) {
+            callback({
+              valid: value as boolean,
+              em: eM ?? helper.em[target]
+            });
+          }
         })
         .catch((error: any) => {
-          console.error(error);
+          if (error.name !== "AbortError") {
+            console.error(error);
+          }
         });
     } else {
       callback(entry);
     }
-  }, 800);
+  }, asyncDelay);
 };
 
 export { v, dp, va, getValue, pc };

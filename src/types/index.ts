@@ -44,7 +44,7 @@ interface Form {
 }
 
 interface ArrayForm extends Form {
-  toObject(): ObjState;
+  toObject(): ObjInput;
 }
 
 interface ObjectForm extends Form {
@@ -154,7 +154,7 @@ interface RequiredInput {
   validating: boolean;
 }
 
-type ObjState = {
+type ObjInput = {
   [key in string]: Input;
 };
 
@@ -179,7 +179,7 @@ export type {
   Input,
   ValuesType,
   ValidationStateType,
-  ObjState,
+  ObjInput,
   StateType,
   CustomValidationType,
   MatchResultType,
