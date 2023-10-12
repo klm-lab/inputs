@@ -784,7 +784,7 @@ validation: {
 [MIT][license-url]
 
 
-[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-inputs/1.1.5?style=for-the-badge
+[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-inputs/1.1.51?style=for-the-badge
 
 [dependencies-shield]: https://img.shields.io/badge/dependencies-0-green?style=for-the-badge
 
