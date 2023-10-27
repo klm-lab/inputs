@@ -358,9 +358,7 @@ const va = (
           }
         })
         .catch((error: any) => {
-          if (error.name !== "AbortError") {
-            console.error(error);
-          }
+          console.error(error);
         });
     } else {
       callback(entry);

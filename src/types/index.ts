@@ -41,6 +41,8 @@ interface Form {
   isValid: boolean;
 
   reset(): void;
+
+  getValues(): { [k in string]: any };
 }
 
 interface ArrayForm extends Form {

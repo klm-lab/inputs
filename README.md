@@ -677,6 +677,7 @@ In the `form` object, you have access some useful properties. <br>
 * `reset` let you reset a form when you successfully submit<br>
 * `toArray` Return an array version of your inputs.<br>
 * `toObject` Return an object version of your inputs.<br>
+* `getValues` Return an object version of your inputs values.<br>
 * `isValid` tell you if the whole form is valid, if all your inputs are valid<br>
 
 ### Reset
@@ -705,6 +706,20 @@ const [myInputs, setMyInputs, form] = useInputs([...])
 
 
 const myObjectFrom = form.toObject()
+```
+### GetValues
+
+```js
+const [myInputs, setMyInputs, form] = useInputs(...)
+
+const submit = () => {
+    if (form.isValid) {
+       const values = form.getValues();
+       // Your stuff
+    }
+}
+
+<button className={form.isValid ? validClass : invalidClass} onClick={submit}>Submit</button>
 ```
 
 ### IsValid
@@ -810,7 +825,7 @@ validation: {
 [MIT][license-url]
 
 
-[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-inputs/1.1.6?style=for-the-badge
+[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-inputs/1.1.7?style=for-the-badge
 
 [dependencies-shield]: https://img.shields.io/badge/dependencies-0-green?style=for-the-badge
 
