@@ -292,4 +292,13 @@ const t = (state: any, type: StateType) => {
   return result;
 };
 
-export { cm, vs, rs, mr, t };
+// E extract values from state
+const e = (state: any) => {
+  const result = {} as any;
+  for (const key in state) {
+    result[state[key].name ?? state[key].id] = state[key].value;
+  }
+  return result;
+};
+
+export { cm, vs, rs, mr, t, e };

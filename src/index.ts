@@ -7,7 +7,7 @@ import type {
   StringStateOutput,
   ValuesType
 } from "./types";
-import { cm, mr, rs, t, vs } from "./util";
+import { cm, e, mr, rs, t, vs } from "./util";
 import { v, va } from "./util/validation";
 import { useCallback, useMemo, useState } from "react";
 import { H } from "./util/helper";
@@ -65,12 +65,17 @@ const inputs = (
     return t(i, type === "object" ? "array" : "object");
   }, [i]);
 
+  const getValues = useCallback(() => {
+    return e(i);
+  }, [i]);
+
   return [
     selective ? i[selective] : i,
     setState,
     {
       isValid: fv,
       reset,
+      getValues,
       ...(type === "object" ? { toArray: formT } : { toObject: formT })
     }
   ];
