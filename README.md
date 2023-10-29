@@ -9,7 +9,6 @@
 </div>
 
 ![version][version-shield]
-![dependencies][dependencies-shield]
 ![size][size-shield]
 ![MIT License][license-shield]
 
@@ -723,7 +722,7 @@ Useful if you want to Handle your inputs data step by step. First import `trackI
 ### Setup trackID
 
 Setup tracking id by calling `trackInputs` with an array of id.
->[!NOTE]<br>
+> [!NOTE]<br>
 > `trackID` doesn't need to be unique.
 
 ```js
@@ -749,7 +748,7 @@ const ComponentStep2 = () => {
 ### Add persistID
 
 You can persist data on component unmount with a `persistID`.
->[!IMPORTANT]<br>
+> [!IMPORTANT]<br>
 > `persistID` must be unique throughout your application, and must not change during the component's lifetime.<br>
 
 ```js
@@ -885,9 +884,7 @@ validation: {
 [MIT][license-url]
 
 
-[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-inputs/1.1.7?style=for-the-badge
-
-[dependencies-shield]: https://img.shields.io/badge/dependencies-0-green?style=for-the-badge
+[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-inputs/1.1.8?style=for-the-badge
 
 [license-shield]: https://img.shields.io/github/license/klm-lab/inputs?style=for-the-badge
 
