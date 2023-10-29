@@ -1,19 +1,16 @@
 import type {
   ArrayStateOutput,
-  Config,
-  IDTrackUtil,
   Input,
   ObjInput,
   ObjStateOutput,
   StateType,
   StringStateOutput,
-  TrackUtil,
   ValuesType
 } from "./types";
-import { cm, e, mr, rs, t, TRACKING_KEYS, vs } from "./util";
+import { cm, e, mr, rs, t, vs } from "./util";
 import { v, va } from "./util/validation";
-import { useEffect, useMemo } from "react";
-import { H, persist } from "./util/helper";
+import { useMemo } from "react";
+import { H } from "./util/helper";
 import { createStore } from "aio-store/react";
 
 const populate = (state: any, type: StateType): any => {
@@ -39,69 +36,51 @@ const populate = (state: any, type: StateType): any => {
 const inputs = (
   initialState: any,
   type: StateType,
-  config: Config,
+  asyncDelay: number,
   selective?: string
 ) => {
-  const {
-    store: inputsStore,
-    set,
-    reset,
-    getValues
-  } = useMemo(() => {
-    if (config.persistID && persist.p[config.persistID]) {
-      return persist.p[config.persistID];
-    }
+  const inputStores = useMemo(
+    () => createStore(populate(initialState, type)),
+    []
+  );
 
-    const store = createStore(populate(initialState, type));
-    const en = store.get("entry");
-    const getValues = () => e(store.get("entry"));
+  const { entry, isValid } = inputStores();
 
-    const reset = () => {
-      store.set((ref) => {
-        ref.entry = rs({ ...en });
-        ref.isValid = store.get("helper").iv;
-      });
+  const { set, reset, to, getValues } = useMemo(() => {
+    const to = () => {
+      const en = inputStores.get("entry");
+      return type === "object" ? en : t(en, "array");
     };
-
-    if (config.trackID && config.trackID.id) {
-      config.trackID.getValues = getValues;
-      config.trackID.reset = reset;
-      config.trackID.isValid = () => store.get("isValid");
-    }
-    const result = {
+    return {
       set: (input: Input, value: ValuesType) => {
         return onChange(
           // entry is used to get id so, no need to add it as dependency
-          selective ? en[selective] : input,
+          selective ? entry[selective] : input,
           selective ? input : value,
-          store,
-          config.asyncDelay as number
+          inputStores,
+          asyncDelay
         );
       },
-      reset,
-      getValues,
-      store
+      reset: () => {
+        inputStores.set((ref) => {
+          // just for reset, no need to add entry as dependency;
+          ref.entry = rs({ ...entry });
+          ref.isValid = inputStores.get("helper").iv;
+        });
+      },
+      to: type === "object" ? { toArray: to } : { toObject: to },
+      getValues: () => {
+        return e(inputStores.get("entry"));
+      }
     };
-    if (config.persistID) {
-      persist.p[config.persistID as string] = result;
-    }
-    return result;
   }, []);
 
-  const { entry, isValid } = inputsStore();
-
   const inputs = selective ? entry[selective] : entry;
-
-  useEffect(() => {
-    return () => {
-      !config.persistID && reset();
-    };
-  }, [config.persistID, reset]);
 
   return [
     type === "object" ? inputs : t(inputs, "array"),
     set,
-    { isValid, reset, getValues }
+    { isValid, reset, getValues, ...to }
   ];
 };
 
@@ -173,19 +152,22 @@ const onChange = (
 
 function useInputs<S>(
   initialState: ObjInput & S,
-  config?: Config
+  asyncDelay?: number
 ): ObjStateOutput<keyof S>;
-function useInputs(initialState: Input[], config?: Config): ArrayStateOutput;
+function useInputs(
+  initialState: Input[],
+  asyncDelay?: number
+): ArrayStateOutput;
 function useInputs(
   initialState: (string | Input)[],
-  config?: Config
+  asyncDelay?: number
 ): ArrayStateOutput;
-function useInputs(initialState: string, config?: Config): StringStateOutput;
-
 function useInputs(
-  initialState: any,
-  config: Config = { asyncDelay: 800 }
-): any {
+  initialState: string,
+  asyncDelay?: number
+): StringStateOutput;
+
+function useInputs(initialState: any, asyncDelay: number = 800): any {
   if (Array.isArray(initialState)) {
     return inputs(
       initialState.map((entry, i) =>
@@ -196,54 +178,13 @@ function useInputs(
           : { id: `input_${i}`, ...entry }
       ),
       "array",
-      config
+      asyncDelay
     );
   }
   if (typeof initialState === "string") {
-    return inputs({ [initialState]: {} }, "object", config, initialState);
+    return inputs({ [initialState]: {} }, "object", asyncDelay, initialState);
   }
-  return inputs(initialState, "object", config);
+  return inputs(initialState, "object", asyncDelay);
 }
 
-function trackInputs<const S extends string>(trackingID: S[]) {
-  const track = {} as any;
-  trackingID.forEach((a) => {
-    track[a] = {
-      id: a
-    };
-  });
-
-  track.getValues = () => {
-    let values = {} as any;
-    for (const t in track) {
-      if (!TRACKING_KEYS.includes(t) && track[t] && track[t].getValues) {
-        values = {
-          ...values,
-          ...track[t].getValues()
-        };
-      }
-    }
-    return values;
-  };
-  track.reset = () => {
-    for (const t in track) {
-      if (!TRACKING_KEYS.includes(t) && track[t] && track[t].reset) {
-        track[t].reset();
-      }
-    }
-  };
-
-  track.isValid = () => {
-    let isValid = true;
-    for (const t in track) {
-      if (!TRACKING_KEYS.includes(t) && track[t] && track[t].isValid) {
-        isValid = isValid && track[t].isValid();
-      }
-    }
-    return isValid;
-  };
-
-  return track as TrackUtil & { [k in S]: IDTrackUtil<S> };
-}
-
-export { useInputs, trackInputs };
+export { useInputs };

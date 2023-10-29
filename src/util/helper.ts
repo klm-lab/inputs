@@ -1,6 +1,14 @@
 import type { ErrorMessageType, ObjInput, ValidationStateType } from "../types";
 
 class H {
+  get iv(): boolean {
+    return this._iv;
+  }
+
+  set iv(value: boolean) {
+    this._iv = value;
+  }
+
   get a(): { [k in string]: any } {
     return this._a;
   }
@@ -40,6 +48,7 @@ class H {
   set ok(value: { [k in string]: Set<keyof ValidationStateType> }) {
     this._ok = value;
   }
+
   // Omitted keys
   private _ok: { [k in string]: Set<keyof ValidationStateType> };
   // Saved error message
@@ -51,12 +60,15 @@ class H {
   // async custom throttle
   private _a: { [k in string]: any };
 
+  private _iv: boolean;
+
   constructor() {
     this._ok = {};
     this._s = {};
     this._em = {};
     this._tm = {};
     this._a = {};
+    this._iv = false;
   }
 
   clean(s: ObjInput) {
@@ -70,4 +82,22 @@ class H {
   }
 }
 
-export { H };
+class Persist {
+  get p(): { [k in string]: any } {
+    return this._p;
+  }
+
+  set p(value: { [k in string]: any }) {
+    this._p = value;
+  }
+
+  private _p: { [k in string]: any };
+
+  constructor() {
+    this._p = {};
+  }
+}
+
+const persist = new Persist();
+
+export { H, persist };

@@ -114,10 +114,16 @@ const getValue = (rule: any) => {
 };
 
 // V is validate
-const v = (helper: H, state: ObjInput, target: string, value: ValuesType) => {
+const v = (
+  inputStores: any,
+  state: ObjInput,
+  target: string,
+  value: ValuesType
+) => {
   const entry: Input = state[target];
   const rules: ValidationStateType = entry.validation || {};
   let valid: boolean = true;
+  const helper = inputStores.get("helper");
   const em: ErrorMessageType | undefined = helper.em[target];
 
   // Required
@@ -324,14 +330,15 @@ const v = (helper: H, state: ObjInput, target: string, value: ValuesType) => {
 
 // Async validation
 const va = (
-  helper: H,
-  state: any,
+  inputStores: any,
+  state: ObjInput,
   target: string,
   value: any,
   asyncDelay: number,
   callback: any
 ) => {
   const entry: Input = state[target];
+  const helper = inputStores.get("helper");
   clearTimeout(helper.a[entry.key as string]);
   helper.a[entry.key as string] = setTimeout(() => {
     // Save the time
@@ -353,7 +360,9 @@ const va = (
           if (ST === helper.a[entry.key as string]) {
             callback({
               valid: value as boolean,
-              em: eM ?? helper.em[target]
+              em: eM ?? helper.em[target],
+              entry,
+              inputStores
             });
           }
         })
