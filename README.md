@@ -9,7 +9,6 @@
 </div>
 
 ![version][version-shield]
-![dependencies][dependencies-shield]
 ![size][size-shield]
 ![MIT License][license-shield]
 
@@ -602,7 +601,7 @@ const [myInputs, setMyInputs] = useInputs({
 * **Asynchronous custom validation**<br>
   For performance purpose, you need to pass `async` property to `true`.
   Do not worry about multiple calls to the server. We make sure to call the server only when user stops typing.<br>
-  By default we delay async request by `800` ms. But you can override that value by passing an optional Arguments to `useInputs`. The type is number.
+  By default we delay async request by `800` ms. But you can override that value by overriding, your inputs options in `useInputs`. The type is number.
 
 ```js
 const [myInputs, setMyInputs] = useInputs({
@@ -618,7 +617,7 @@ const [myInputs, setMyInputs] = useInputs({
         }
     }
     // async delay value => 2000
-},2000)
+},{asyncDelay: 2000})
 ```
 
 **What happen if I didn't set `async` property with custom asynchronous validation ?**<br>
@@ -675,8 +674,6 @@ myInputs.username.validating && <span>Validating your username ....</span>
 In the `form` object, you have access some useful properties. <br>
 
 * `reset` let you reset a form when you successfully submit<br>
-* `toArray` Return an array version of your inputs.<br>
-* `toObject` Return an object version of your inputs.<br>
 * `getValues` Return an object version of your inputs values.<br>
 * `isValid` tell you if the whole form is valid, if all your inputs are valid<br>
 
@@ -688,25 +685,7 @@ const [myInputs, setMyInputs, form] = useInputs(...)
 // Reset your form
 form.reset()
 ```
-### ToArray
 
-```js
-const [myInputs, setMyInputs, form] = useInputs({...})
-
-
-const myArrayFrom = form.toArray()
-```
-
-### ToObject
-It is a good practice to always add an `id` to your inputs. The `id` property is used when you transform your inputs.
-If `id` is not found, we use a generated one. So if you do not provide `id`, do a console.log(...) to see your transformed inputs.
-
-```js
-const [myInputs, setMyInputs, form] = useInputs([...])
-
-
-const myObjectFrom = form.toObject()
-```
 ### GetValues
 
 ```js
@@ -734,6 +713,86 @@ const submit = () => {
 }
 
 <button className={form.isValid ? validClass : invalidClass} onClick={submit}>Submit</button>
+```
+
+## Global Inputs
+
+Useful if you want to Handle your inputs data step by step. First import `trackInputs` and use it like below <br>
+
+### Setup trackID
+
+Setup tracking id by calling `trackInputs` with an array of id.
+> [!NOTE]<br>
+> `trackID` doesn't need to be unique.
+
+```js
+import {trackInputs} from "aio-inputs";
+
+// Using ID STEP_1 and STEP_2, export a track utility
+export const track = trackInputs(["STEP_1","STEP_2","..."]);
+
+const ComponentStep1 = () => {
+  const [myInputs, setMyInputs] = useInputs(..., {trackID: track.STEP_1})
+    
+    return ...
+}
+
+const ComponentStep2 = () => {
+  const [myInputs, setMyInputs] = useInputs(..., {trackID: track.STEP_2})
+
+  return ...
+}
+
+```
+
+### Add persistID
+
+You can persist data on component unmount with a `persistID`.
+> [!IMPORTANT]<br>
+> `persistID` must be unique throughout your application, and must not change during the component's lifetime.<br>
+
+```js
+import {trackInputs} from "aio-inputs";
+
+const ComponentStep1 = () => {
+  const [myInputs, setMyInputs] = useInputs(..., {persistID: "ComponentStep1_ID"})
+    
+    return ...
+}
+```
+
+### Manage tracked data
+
+```js
+// Import the track you created
+import {track} from "someWhere";
+
+// Get values
+const STEP_1_DATA = track.STEP_1.getValues()
+
+const STEP_2_DATA = track.STEP_2.getValues()
+
+// ❗Merge all inputs value into one Object, Use with caution
+const ALL_DATA = track.getValues()
+
+// Get valid status
+const STEP_1_VALID =  track.STEP_1.isValid()
+
+const STEP_2_VALID =  track.STEP_2.isValid()
+
+const IS_ALL_VALID = track.isValid();
+
+// Reset all inputs
+track.reset()
+
+// Reset values
+track.STEP_1.reset()
+
+track.STEP_2.reset()
+
+// Reset all inputs
+track.reset()
+
 ```
 
 ## Input properties
@@ -825,9 +884,7 @@ validation: {
 [MIT][license-url]
 
 
-[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-inputs/1.1.7?style=for-the-badge
-
-[dependencies-shield]: https://img.shields.io/badge/dependencies-0-green?style=for-the-badge
+[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-inputs/1.1.8?style=for-the-badge
 
 [license-shield]: https://img.shields.io/github/license/klm-lab/inputs?style=for-the-badge
 

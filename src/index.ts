@@ -1,16 +1,20 @@
 import type {
   ArrayStateOutput,
+  Config,
+  IDTrackUtil,
   Input,
   ObjInput,
   ObjStateOutput,
   StateType,
   StringStateOutput,
+  TrackUtil,
   ValuesType
 } from "./types";
-import { cm, e, mr, rs, t, vs } from "./util";
+import { cm, e, mr, rs, t, TRACKING_KEYS, vs } from "./util";
 import { v, va } from "./util/validation";
-import { useCallback, useMemo, useState } from "react";
-import { H } from "./util/helper";
+import { useEffect, useMemo } from "react";
+import { H, persist } from "./util/helper";
+import { createStore } from "aio-store/react";
 
 const populate = (state: any, type: StateType): any => {
   const final = {} as ObjInput;
@@ -26,113 +30,115 @@ const populate = (state: any, type: StateType): any => {
     final[parseKey] = v;
     helper.s[parseKey] = { ...v };
   }
-  const s = helper.clean(mr(final, helper));
-  return [type === "object" ? s : t(s, "array"), vs(s), helper];
+  const entry = helper.clean(mr(final, helper));
+  const isValid = vs(entry);
+  helper.iv = isValid;
+  return { entry, isValid, helper };
 };
 
 const inputs = (
   initialState: any,
   type: StateType,
-  asyncDelay: number,
+  config: Config,
   selective?: string
 ) => {
-  const [entry, valid, helper] = useMemo(
-    () => populate(initialState, type),
-    []
-  );
+  const {
+    store: inputsStore,
+    set,
+    reset,
+    getValues
+  } = useMemo(() => {
+    if (config.persistID && persist.p[config.persistID]) {
+      return persist.p[config.persistID];
+    }
 
-  // Fv is form is valid
-  // 'i' is inputs
-  const [{ i, fv }, setInputs] = useState({ i: entry, fv: valid });
-  const setState = useCallback((input: Input, value: ValuesType) => {
-    return onChange(
-      helper,
-      selective ? i[selective] : input,
-      selective ? input : value,
-      setInputs,
-      type,
-      asyncDelay
-    );
-  }, []);
+    const store = createStore(populate(initialState, type));
+    const en = store.get("entry");
+    const getValues = () => e(store.get("entry"));
 
-  const reset = useCallback(() => {
-    setInputs((prevState: any) => {
-      return { i: rs(prevState.i, type), fv: false };
-    });
-  }, []);
+    const reset = () => {
+      store.set((ref) => {
+        ref.entry = rs({ ...en });
+        ref.isValid = store.get("helper").iv;
+      });
+    };
 
-  const formT = useCallback(() => {
-    return t(i, type === "object" ? "array" : "object");
-  }, [i]);
-
-  const getValues = useCallback(() => {
-    return e(i);
-  }, [i]);
-
-  return [
-    selective ? i[selective] : i,
-    setState,
-    {
-      isValid: fv,
+    if (config.trackID && config.trackID.id) {
+      config.trackID.getValues = getValues;
+      config.trackID.reset = reset;
+      config.trackID.isValid = () => store.get("isValid");
+    }
+    const result = {
+      set: (input: Input, value: ValuesType) => {
+        return onChange(
+          // entry is used to get id so, no need to add it as dependency
+          selective ? en[selective] : input,
+          selective ? input : value,
+          store,
+          config.asyncDelay as number
+        );
+      },
       reset,
       getValues,
-      ...(type === "object" ? { toArray: formT } : { toObject: formT })
+      store
+    };
+    if (config.persistID) {
+      persist.p[config.persistID as string] = result;
     }
+    return result;
+  }, []);
+
+  const { entry, isValid } = inputsStore();
+
+  const inputs = selective ? entry[selective] : entry;
+
+  useEffect(() => {
+    return () => {
+      !config.persistID && reset();
+    };
+  }, [config.persistID, reset]);
+
+  return [
+    type === "object" ? inputs : t(inputs, "array"),
+    set,
+    { isValid, reset, getValues }
   ];
 };
 
-function asyncChange(
-  helper: H,
-  input: Input,
-  value: ValuesType,
-  setState: any,
-  type: StateType,
-  toValidate: ObjInput,
-  asyncDelay: number
-) {
-  va(
-    helper,
-    toValidate,
-    input.id as string,
-    value,
-    asyncDelay,
-    ({ valid: asyncValid, em: asyncErrorMessage }: any) => {
-      setState((prevState: any) => {
-        const clonedData =
-          type === "object" ? { ...prevState.i } : t(prevState.i, "object");
-        // revalidate input
-        const { valid, em } = v(
-          helper,
-          clonedData,
-          input.id as string,
-          clonedData[input.id as string].value
-        );
-        clonedData[input.id as string].valid = valid && asyncValid;
-        clonedData[input.id as string].errorMessage = valid
-          ? asyncErrorMessage
-          : em;
-        clonedData[input.id as string].validating = false;
-        return {
-          i: type === "object" ? clonedData : t(clonedData, "array"),
-          fv: vs(clonedData)
-        };
-      });
-    }
-  );
-}
+const asyncCallback = ({
+  valid: asyncValid,
+  em: asyncErrorMessage,
+  entry,
+  inputStores
+}: any) => {
+  inputStores.set((ref: any) => {
+    const clonedData = { ...ref.entry };
+    // revalidate input
+    const { valid, em } = v(
+      inputStores,
+      clonedData,
+      entry.id as string,
+      clonedData[entry.id as string].value
+    );
+    clonedData[entry.id as string].valid = valid && asyncValid;
+    clonedData[entry.id as string].errorMessage = valid
+      ? asyncErrorMessage
+      : em;
+    clonedData[entry.id as string].validating = false;
+    ref.entry = clonedData;
+    ref.isValid = vs(clonedData);
+  });
+};
 
-function onChange(
-  helper: H,
+const onChange = (
   input: Input,
   value: ValuesType,
-  setState: any,
-  type: StateType,
+  inputStores: any,
   asyncDelay: number
-) {
-  setState((prevState: any) => {
-    const clonedData =
-      type === "object" ? { ...prevState.i } : t(prevState.i, "object");
-    const { valid, em } = v(helper, clonedData, input.id as string, value);
+) => {
+  inputStores.set((ref: any) => {
+    const clonedData = { ...ref.entry };
+    const { valid, em } = v(inputStores, clonedData, input.id as string, value);
     clonedData[input.id as string].value = value;
     clonedData[input.id as string].touched = true;
     clonedData[input.id as string].valid = input.validation?.async
@@ -150,34 +156,36 @@ function onChange(
       : false;
 
     if (valid && input.validation?.async) {
-      asyncChange(helper, input, value, setState, type, clonedData, asyncDelay);
+      va(
+        inputStores,
+        clonedData,
+        input.id as string,
+        value,
+        asyncDelay,
+        asyncCallback
+      );
     }
 
-    return {
-      fv: vs(clonedData),
-      i: type === "object" ? clonedData : t(clonedData, "array")
-    };
+    ref.entry = clonedData;
+    ref.isValid = vs(clonedData);
   });
-}
+};
 
 function useInputs<S>(
   initialState: ObjInput & S,
-  asyncDelay?: number
+  config?: Config
 ): ObjStateOutput<keyof S>;
-function useInputs(
-  initialState: Input[],
-  asyncDelay?: number
-): ArrayStateOutput;
+function useInputs(initialState: Input[], config?: Config): ArrayStateOutput;
 function useInputs(
   initialState: (string | Input)[],
-  asyncDelay?: number
+  config?: Config
 ): ArrayStateOutput;
-function useInputs(
-  initialState: string,
-  asyncDelay?: number
-): StringStateOutput;
+function useInputs(initialState: string, config?: Config): StringStateOutput;
 
-function useInputs(initialState: any, asyncDelay: number = 800): any {
+function useInputs(
+  initialState: any,
+  config: Config = { asyncDelay: 800 }
+): any {
   if (Array.isArray(initialState)) {
     return inputs(
       initialState.map((entry, i) =>
@@ -188,13 +196,54 @@ function useInputs(initialState: any, asyncDelay: number = 800): any {
           : { id: `input_${i}`, ...entry }
       ),
       "array",
-      asyncDelay
+      config
     );
   }
   if (typeof initialState === "string") {
-    return inputs({ [initialState]: {} }, "object", asyncDelay, initialState);
+    return inputs({ [initialState]: {} }, "object", config, initialState);
   }
-  return inputs(initialState, "object", asyncDelay);
+  return inputs(initialState, "object", config);
 }
 
-export { useInputs };
+function trackInputs<const S extends string>(trackingID: S[]) {
+  const track = {} as any;
+  trackingID.forEach((a) => {
+    track[a] = {
+      id: a
+    };
+  });
+
+  track.getValues = () => {
+    let values = {} as any;
+    for (const t in track) {
+      if (!TRACKING_KEYS.includes(t) && track[t] && track[t].getValues) {
+        values = {
+          ...values,
+          ...track[t].getValues()
+        };
+      }
+    }
+    return values;
+  };
+  track.reset = () => {
+    for (const t in track) {
+      if (!TRACKING_KEYS.includes(t) && track[t] && track[t].reset) {
+        track[t].reset();
+      }
+    }
+  };
+
+  track.isValid = () => {
+    let isValid = true;
+    for (const t in track) {
+      if (!TRACKING_KEYS.includes(t) && track[t] && track[t].isValid) {
+        isValid = isValid && track[t].isValid();
+      }
+    }
+    return isValid;
+  };
+
+  return track as TrackUtil & { [k in S]: IDTrackUtil<S> };
+}
+
+export { useInputs, trackInputs };

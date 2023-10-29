@@ -23,8 +23,7 @@ function initValidAndTouch(entry: Input, resetValue?: any) {
 }
 
 // reset state
-const rs = (formData: any, type: StateType): any => {
-  const data = type === "object" ? { ...formData } : [...formData];
+const rs = (data: any): any => {
   for (const key in data) {
     const result = data[key].resetValue
       ? initValidAndTouch(data[key], data[key].resetValue)
@@ -301,4 +300,6 @@ const e = (state: any) => {
   return result;
 };
 
-export { cm, vs, rs, mr, t, e };
+const TRACKING_KEYS = Object.freeze(["getValues", "reset", "isValid"]);
+
+export { cm, vs, rs, mr, t, e, TRACKING_KEYS };

@@ -45,14 +45,6 @@ interface Form {
   getValues(): { [k in string]: any };
 }
 
-interface ArrayForm extends Form {
-  toObject(): ObjInput;
-}
-
-interface ObjectForm extends Form {
-  toArray(): Input[];
-}
-
 interface CustomValidationType {
   (
     value: ValuesType,
@@ -139,6 +131,7 @@ interface Input {
   validation?: ValidationStateType;
   validating?: boolean;
 }
+
 // FOr some reason, Build-in Required doesn't work
 interface RequiredInput {
   id: string;
@@ -163,18 +156,43 @@ type ObjInput = {
 type ObjStateOutput<Key> = [
   { [k in Key & string]: RequiredInput },
   (input: RequiredInput, value: any) => void,
-  ObjectForm
+  Form
 ];
-type StringStateOutput = [Input, (value: any) => void, ObjectForm];
+type StringStateOutput = [Input, (value: any) => void, Form];
 type ArrayStateOutput = [
   RequiredInput[],
   (input: RequiredInput, value: any) => void,
-  ArrayForm
+  Form
 ];
 
 type StateType = "object" | "array";
 
+type Config = {
+  asyncDelay?: number;
+  persistID?: string;
+  trackID?: IDTrackUtil<string>;
+};
+
+interface IDTrackUtil<S> {
+  id: S;
+
+  getValues(): { [k in string]: any };
+
+  reset(): void;
+
+  isValid(): boolean;
+}
+
+interface TrackUtil {
+  getValues(): { [k in string]: any };
+
+  reset(): void;
+
+  isValid(): boolean;
+}
+
 export type {
+  TrackUtil,
   ObjStateOutput,
   ArrayStateOutput,
   StringStateOutput,
@@ -191,5 +209,7 @@ export type {
   CopyKeyObjType,
   MergeType,
   CopyType,
-  SpreadReactType
+  SpreadReactType,
+  Config,
+  IDTrackUtil
 };
