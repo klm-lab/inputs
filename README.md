@@ -19,7 +19,7 @@
 Input state management for React. It comes with useful common validations that are applied if you enabled them.<br>
 It supports custom validation asynchronous or not, with dynamic error messages.<br/>
 
-**ALL EXAMPLES 👉** <a target="_blank" href="https://github.com/klm-lab/inputs/examples#readme">HERE</a>
+**ALL EXAMPLES 👉** [HERE][example-links]
 
 ## Installation
 
@@ -869,8 +869,7 @@ validation: {
 }
 ```
 
-**ALL EXAMPLES 👉** <a target="_blank" href="https://github.com/klm-lab/inputs/examples#readme">HERE</a> 
-
+**ALL EXAMPLES 👉** [HERE][example-links]
 ## License
 
 [MIT][license-url]
@@ -881,6 +880,7 @@ validation: {
 [license-shield]: https://img.shields.io/github/license/klm-lab/inputs?style=for-the-badge
 
 [version-shield]: https://img.shields.io/npm/v/aio-inputs?style=for-the-badge
+[example-links]: https://github.com/klm-lab/inputs/tree/dev/examples#readme
 
 
 [license-url]: https://choosealicense.com/licenses/mit/
