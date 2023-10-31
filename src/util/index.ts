@@ -3,13 +3,15 @@ import type {
   MatchResultType,
   MergeType,
   ObjInput,
+  ParsedFiles,
+  RequiredObjInput,
   StateType,
   ValidationStateType
 } from "../types";
-import { dp, pc } from "./validation";
+import { deepMatch, parseCopy } from "./validation";
 import type { H } from "./helper";
 
-function initValidAndTouch(entry: Input, resetValue?: any) {
+function initValidAndTouch(entry: Input) {
   const validation = entry.validation;
   const value = entry.value;
   if (typeof validation === "undefined") {
@@ -19,33 +21,18 @@ function initValidAndTouch(entry: Input, resetValue?: any) {
     return true;
   }
   //If value is provided then input is valid by default
-  return !["", 0, null, undefined].includes(resetValue ?? value);
+  return !["", 0, null, undefined].includes(value);
 }
 
-// reset state
-const rs = (data: any): any => {
-  for (const key in data) {
-    const result = data[key].resetValue
-      ? initValidAndTouch(data[key], data[key].resetValue)
-      : false;
-    data[key] = {
-      ...data[key],
-      value: data[key].resetValue ?? "",
-      valid: result,
-      touched: result
-    };
-  }
-  return data;
-};
-
 // Spread common props
-function cm(entry: Input) {
+function commonProps(entry: Input) {
   return {
     id: entry.id,
     name: entry.name ?? entry.id,
     label: entry.label ?? entry.name ?? entry.id,
     type: entry.type ?? "text",
     value: "",
+    checked: false,
     valid: initValidAndTouch(entry),
     touched: initValidAndTouch(entry),
     placeholder: "",
@@ -117,7 +104,6 @@ const merge = (
       }
     }
   }
-
   omit?.forEach((k: keyof ValidationStateType) => {
     delete state[k];
   });
@@ -140,7 +126,7 @@ const mcv = (
    * We add trackMatching for validation tool. See validate function in validation folder
    * */
   try {
-    matchResult = dp(helper, state, stateKey, matchOrCopyKey, keyPath);
+    matchResult = deepMatch(helper, state, stateKey, matchOrCopyKey, keyPath);
   } catch (_) {
     throw Error(
       "It seems that we have infinite match here. Please make sure that the last matched or copied input does not match or copy anyone"
@@ -235,7 +221,7 @@ const mcv = (
  * }.
  *
  */
-const mr = (state: ObjInput, helper: H) => {
+const matchRules = (state: ObjInput, helper: H) => {
   for (const stateKey in state) {
     // we save the error message
     helper.em[stateKey] = state[stateKey].errorMessage;
@@ -243,7 +229,13 @@ const mr = (state: ObjInput, helper: H) => {
     const copyKey = state[stateKey].validation?.copy;
 
     if (copyKey) {
-      state = mcv(helper, state, stateKey, pc(copyKey, "copy").value, "copy");
+      state = mcv(
+        helper,
+        state,
+        stateKey,
+        parseCopy(copyKey, "copy").value,
+        "copy"
+      );
     }
 
     /*  We get the key to match with, we are trying to see
@@ -265,7 +257,7 @@ const mr = (state: ObjInput, helper: H) => {
 
 // Validate the state
 // Set form is valid
-const vs = (data: ObjInput) => {
+const validateState = (data: RequiredObjInput) => {
   let valid = true;
   for (const formKey in data) {
     valid =
@@ -277,7 +269,7 @@ const vs = (data: ObjInput) => {
   return valid;
 };
 // T transform array to object and vice versa
-const t = (state: any, type: StateType) => {
+const transform = (state: any, type: StateType) => {
   const result = type === "object" ? {} : ([] as any);
   for (const key in state) {
     if (type === "array") {
@@ -291,15 +283,51 @@ const t = (state: any, type: StateType) => {
   return result;
 };
 
+const cleanFiles = (files: ParsedFiles[]) => {
+  // Set type to any to break the contract type
+  return files.map((f: any) => {
+    delete f.selfRemove;
+    delete f.selfUpdate;
+    delete f.key;
+    return f;
+  });
+};
+
 // E extract values from state
-const e = (state: any) => {
-  const result = {} as any;
+const extractValues = (state: RequiredObjInput) => {
+  const result = {} as { [k in string]: any };
   for (const key in state) {
-    result[state[key].name ?? state[key].id] = state[key].value;
+    const K = state[key].name ?? state[key].id;
+    if (state[key].type === "radio") {
+      if (state[key].checked) {
+        result[K] = state[key].value;
+      } else if (!result[K]) {
+        result[K] = "";
+      }
+    } else if (state[key].type === "checkbox") {
+      if (!result[K]) {
+        result[K] = [];
+      }
+      if (state[key].checked) {
+        result[K].push(state[key].value);
+      }
+    } else {
+      result[K] =
+        state[key].type === "file"
+          ? cleanFiles(state[key].files)
+          : state[key].value;
+    }
   }
   return result;
 };
 
 const TRACKING_KEYS = Object.freeze(["getValues", "reset", "isValid"]);
 
-export { cm, vs, rs, mr, t, e, TRACKING_KEYS };
+export {
+  commonProps,
+  validateState,
+  matchRules,
+  transform,
+  extractValues,
+  TRACKING_KEYS
+};

@@ -1,12 +1,15 @@
 import type {
+  AsyncCallback,
+  CopyKeyObjType,
   CopyType,
   ErrorMessageType,
-  Input,
+  InputStore,
   MatchResultType,
   ObjInput,
+  RequiredInput,
+  RequiredObjInput,
   ValidationStateType,
-  ValuesType,
-  CopyKeyObjType
+  ValuesType
 } from "../types";
 import type { H } from "./helper";
 
@@ -16,8 +19,8 @@ const validateEmail = (email: string) => {
   return re.test(String(email).toLowerCase());
 };
 
-// Pc is parse copy
-const pc = (
+// Parse copy key
+const parseCopy = (
   key: CopyType | undefined | string,
   keyPath: keyof ValidationStateType
 ): CopyKeyObjType => {
@@ -40,7 +43,7 @@ const pc = (
 };
 
 // Deep match
-const dp = (
+const deepMatch = (
   helper: H,
   state: ObjInput,
   stateKey: string,
@@ -49,11 +52,14 @@ const dp = (
 ) => {
   const matchKeys: string[] = [];
   let result = {} as MatchResultType;
-  helper.ok[stateKey] = pc(state[stateKey].validation?.copy, keyPath).omit;
+  helper.ok[stateKey] = parseCopy(
+    state[stateKey].validation?.copy,
+    keyPath
+  ).omit;
 
   const match = (matchKey: string, keyPath: keyof ValidationStateType) => {
     // We get omitted path from user
-    const userOmit = pc(state[stateKey].validation?.copy, keyPath).omit;
+    const userOmit = parseCopy(state[stateKey].validation?.copy, keyPath).omit;
 
     if (
       // state[matchKey] exists
@@ -71,13 +77,11 @@ const dp = (
          * If an input omit a validation and match another input who omit another validation,
          * then both omit same validations
          *  */
-        ...pc(state[matchKey].validation?.copy, keyPath).omit,
+        ...parseCopy(state[matchKey].validation?.copy, keyPath).omit,
         ...userOmit
       ]).forEach((k) => {
         // We save omitted path for the current key
         helper.ok[stateKey].add(k);
-        // if custom is omitted, then we remove async to avoid delay on validation
-        k === "custom" && helper.ok[stateKey].add("async");
       });
       matchKeys.push(matchKey as string);
       // Next round with a new matchKey
@@ -114,16 +118,15 @@ const getValue = (rule: any) => {
 };
 
 // V is validate
-const v = (
-  inputStores: any,
-  state: ObjInput,
+const validate = (
+  helper: H,
+  state: RequiredObjInput,
   target: string,
   value: ValuesType
 ) => {
-  const entry: Input = state[target];
+  const entry: RequiredInput = state[target];
   const rules: ValidationStateType = entry.validation || {};
   let valid: boolean = true;
-  const helper = inputStores.get("helper");
   const em: ErrorMessageType | undefined = helper.em[target];
 
   // Required
@@ -140,6 +143,39 @@ const v = (
     };
   }
 
+  // Number
+  if (typeof rules.number !== "undefined") {
+    valid = !isNaN(value) && valid;
+  }
+  if (!valid) {
+    return {
+      valid,
+      em: getErrorMessage(helper, rules.number, target)
+    };
+  }
+
+  // Min
+  if (typeof rules.min !== "undefined") {
+    valid = Number(value) >= getValue(rules.min) && valid;
+  }
+  if (!valid) {
+    return {
+      valid,
+      em: getErrorMessage(helper, rules.min, target)
+    };
+  }
+
+  // Max
+  if (typeof rules.max !== "undefined") {
+    valid = Number(value) <= getValue(rules.max) && valid;
+  }
+  if (!valid) {
+    return {
+      valid,
+      em: getErrorMessage(helper, rules.max, target)
+    };
+  }
+
   // Starts with
   if (typeof rules?.startsWith !== "undefined" && typeof value === "string") {
     valid =
@@ -152,19 +188,8 @@ const v = (
     };
   }
 
-  // Min
-  if (typeof rules.min !== "undefined" && typeof value === "number") {
-    valid = value >= getValue(rules.min) && valid;
-  }
-  if (!valid) {
-    return {
-      valid,
-      em: getErrorMessage(helper, rules.min, target)
-    };
-  }
-
   // MinLength
-  if (typeof rules.minLength !== "undefined" && value) {
+  if (typeof rules.minLength !== "undefined") {
     valid = value?.length >= getValue(rules.minLength) && valid;
   }
   if (!valid) {
@@ -192,7 +217,7 @@ const v = (
   }
 
   // MaxLength
-  if (typeof rules.maxLength !== "undefined" && value) {
+  if (typeof rules.maxLength !== "undefined") {
     valid = value?.length <= getValue(rules.maxLength) && valid;
   }
   if (!valid) {
@@ -216,28 +241,6 @@ const v = (
     return {
       valid,
       em: getErrorMessage(helper, rules.maxLengthWithoutSpace, target)
-    };
-  }
-
-  // Max
-  if (typeof rules.max !== "undefined" && typeof value === "number") {
-    valid = value <= getValue(rules.max) && valid;
-  }
-  if (!valid) {
-    return {
-      valid,
-      em: getErrorMessage(helper, rules.max, target)
-    };
-  }
-
-  // Number
-  if (typeof rules.number !== "undefined") {
-    valid = typeof value === "number" && valid;
-  }
-  if (!valid) {
-    return {
-      valid,
-      em: getErrorMessage(helper, rules.number, target)
     };
   }
 
@@ -315,7 +318,7 @@ const v = (
       };
     }
   }
-  if (!entry.validation?.async && typeof rules.custom !== "undefined") {
+  if (!entry.validation?.asyncCustom && typeof rules.custom !== "undefined") {
     let eM: ErrorMessageType | null = null;
     valid = rules.custom(value, (m: ErrorMessageType) => (eM = m)) as boolean;
     if ((typeof valid as unknown) !== "boolean") {
@@ -329,25 +332,25 @@ const v = (
 };
 
 // Async validation
-const va = (
-  inputStores: any,
-  state: ObjInput,
+const asyncValidation = (
+  store: InputStore,
+  state: RequiredObjInput,
   target: string,
   value: any,
-  asyncDelay: number,
-  callback: any
+  callback: AsyncCallback
 ) => {
-  const entry: Input = state[target];
-  const helper = inputStores.get("helper");
+  const entry: RequiredInput = state[target];
+  const helper = store.get("helper");
   clearTimeout(helper.a[entry.key as string]);
   helper.a[entry.key as string] = setTimeout(() => {
     // Save the time
     const ST = helper.a[entry.key as string];
     const rules: ValidationStateType = entry.validation || {};
-    if (typeof rules.custom !== "undefined") {
+    if (typeof rules.asyncCustom !== "undefined") {
       let eM: ErrorMessageType | null = null;
       Promise.resolve(
-        rules.custom && rules.custom(value, (m: ErrorMessageType) => (eM = m))
+        rules.asyncCustom &&
+          rules.asyncCustom(value, (m: ErrorMessageType) => (eM = m))
       )
         .then((value) => {
           if (typeof value !== "boolean") {
@@ -359,10 +362,10 @@ const va = (
            * */
           if (ST === helper.a[entry.key as string]) {
             callback({
-              valid: value as boolean,
+              valid: value,
               em: eM ?? helper.em[target],
-              entry,
-              inputStores
+              entry: entry,
+              store: store
             });
           }
         })
@@ -370,9 +373,14 @@ const va = (
           console.error(error);
         });
     } else {
-      callback(entry);
+      callback({
+        valid: entry.valid,
+        em: entry.errorMessage,
+        entry: entry,
+        store: store
+      });
     }
-  }, asyncDelay);
+  }, store.get("asyncDelay"));
 };
 
-export { v, dp, va, getValue, pc };
+export { validate, deepMatch, asyncValidation, getValue, parseCopy };

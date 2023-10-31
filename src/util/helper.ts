@@ -1,14 +1,11 @@
-import type { ErrorMessageType, ObjInput, ValidationStateType } from "../types";
+import type {
+  ComputeOnceOut,
+  ErrorMessageType,
+  ObjInput,
+  ValidationStateType
+} from "../types";
 
 class H {
-  get iv(): boolean {
-    return this._iv;
-  }
-
-  set iv(value: boolean) {
-    this._iv = value;
-  }
-
   get a(): { [k in string]: any } {
     return this._a;
   }
@@ -60,15 +57,12 @@ class H {
   // async custom throttle
   private _a: { [k in string]: any };
 
-  private _iv: boolean;
-
   constructor() {
     this._ok = {};
     this._s = {};
     this._em = {};
     this._tm = {};
     this._a = {};
-    this._iv = false;
   }
 
   clean(s: ObjInput) {
@@ -83,15 +77,15 @@ class H {
 }
 
 class Persist {
-  get p(): { [k in string]: any } {
+  get p(): { [k in string]: ComputeOnceOut } {
     return this._p;
   }
 
-  set p(value: { [k in string]: any }) {
+  set p(value: { [k in string]: ComputeOnceOut }) {
     this._p = value;
   }
 
-  private _p: { [k in string]: any };
+  private _p: { [k in string]: ComputeOnceOut };
 
   constructor() {
     this._p = {};

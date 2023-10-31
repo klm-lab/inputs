@@ -1,8 +1,8 @@
-// __ => help us validate matched keys
-// ___ => help us save original errorMessage
+import type { StoreType } from "aio-store/react";
+import type { H } from "../util/helper";
+import type { SyntheticEvent } from "react";
 
 type HTMLInputTypeAttribute =
-  | "button"
   | "checkbox"
   | "color"
   | "date"
@@ -37,19 +37,18 @@ interface SpreadReactType {
   placeholder: StringOrObj;
 }
 
-interface Form {
-  isValid: boolean;
-
-  reset(): void;
-
-  getValues(): { [k in string]: any };
-}
-
 interface CustomValidationType {
   (
     value: ValuesType,
-    set?: (message: ErrorMessageType) => void
-  ): boolean | Promise<boolean>;
+    setErrorMessage?: (message: ErrorMessageType) => void
+  ): boolean;
+}
+
+interface CustomAsyncValidationType {
+  (
+    value: ValuesType,
+    setErrorMessage?: (message: ErrorMessageType) => void
+  ): Promise<boolean>;
 }
 
 type MatchResultType = {
@@ -77,7 +76,6 @@ type CopyType = { value: string; omit: (keyof ValidationStateType)[] };
 
 interface ValidationStateType {
   required?: BooleanOrMap;
-  async?: boolean;
   email?: BooleanOrMap;
   number?: BooleanOrMap;
   min?: NumberOrMap;
@@ -92,11 +90,11 @@ interface ValidationStateType {
   regex?: RegExp & any;
   copy?: CopyType;
   custom?: CustomValidationType;
+  asyncCustom?: CustomAsyncValidationType;
 }
 
 interface RequiredValidationStateType {
   required: BooleanOrMap;
-  async: boolean;
   email: BooleanOrMap;
   number: BooleanOrMap;
   min: NumberOrMap;
@@ -110,6 +108,7 @@ interface RequiredValidationStateType {
   endsWith: StringOrMap;
   regex: RegExp & any;
   copy: CopyType;
+  asyncCustom: CustomAsyncValidationType;
   custom: CustomValidationType;
 }
 
@@ -118,28 +117,43 @@ type ErrorMessageType = StringOrObj;
 
 interface Input {
   id?: string;
-  name?: StringOrObj;
+  name?: string;
   type?: HTMLInputTypeAttribute;
   label?: StringOrObj;
   value?: ValuesType;
-  resetValue?: ValuesType;
+  checked?: boolean;
+  multiple?: boolean;
+  mergeChanges?: boolean;
   valid?: boolean;
   touched?: boolean;
   placeholder?: StringOrObj;
   errorMessage?: ErrorMessageType;
-  key?: string;
   validation?: ValidationStateType;
-  validating?: boolean;
+}
+
+interface ParsedFiles {
+  file: File;
+  key: string;
+  url: string;
+  updatedFile: any;
+
+  selfRemove(): void;
+  onLoad(): void;
+
+  selfUpdate(data: any): void;
 }
 
 // FOr some reason, Build-in Required doesn't work
 interface RequiredInput {
   id: string;
-  name: StringOrObj;
+  name: string;
   type: HTMLInputTypeAttribute;
   label: StringOrObj;
   value: ValuesType;
-  resetValue: ValuesType;
+  files: ParsedFiles[];
+  checked: boolean;
+  multiple: boolean;
+  mergeChanges: boolean;
   valid: boolean;
   touched: boolean;
   placeholder: StringOrObj;
@@ -147,23 +161,21 @@ interface RequiredInput {
   key: string;
   validation: RequiredValidationStateType;
   validating: boolean;
+
+  onChange(event: SyntheticEvent<HTMLInputElement>): void;
 }
 
 type ObjInput = {
   [key in string]: Input;
 };
 
-type ObjStateOutput<Key> = [
-  { [k in Key & string]: RequiredInput },
-  (input: RequiredInput, value: any) => void,
-  Form
-];
-type StringStateOutput = [Input, (value: any) => void, Form];
-type ArrayStateOutput = [
-  RequiredInput[],
-  (input: RequiredInput, value: any) => void,
-  Form
-];
+type RequiredObjInput = {
+  [key in string]: RequiredInput;
+};
+
+type ObjStateOutput<Key> = [{ [k in Key & string]: RequiredInput }, Form];
+type StringStateOutput = [RequiredInput, Form];
+type ArrayStateOutput = [RequiredInput[], Form];
 
 type StateType = "object" | "array";
 
@@ -173,22 +185,45 @@ type Config = {
   trackID?: IDTrackUtil<string>;
 };
 
-interface IDTrackUtil<S> {
-  id: S;
+interface CommonForm {
+  getValues(name?: string): any;
 
   getValues(): { [k in string]: any };
 
   reset(): void;
+}
+
+interface Form extends CommonForm {
+  isValid: boolean;
+}
+
+interface IDTrackUtil<S> extends CommonForm {
+  id: S;
 
   isValid(): boolean;
 }
 
-interface TrackUtil {
-  getValues(): { [k in string]: any };
-
-  reset(): void;
-
+interface TrackUtil extends CommonForm {
   isValid(): boolean;
+}
+
+type InputStore = StoreType<{
+  entry: RequiredObjInput;
+  isValid: boolean;
+  helper: H;
+  initialValid: boolean;
+  asyncDelay: number;
+}>;
+type AsyncValidationParams = {
+  valid: boolean;
+  em?: ErrorMessageType;
+  entry: RequiredInput;
+  store: InputStore;
+};
+type AsyncCallback = (params: AsyncValidationParams) => void;
+
+interface ComputeOnceOut extends CommonForm {
+  store: InputStore;
 }
 
 export type {
@@ -211,5 +246,12 @@ export type {
   CopyType,
   SpreadReactType,
   Config,
-  IDTrackUtil
+  RequiredInput,
+  IDTrackUtil,
+  InputStore,
+  AsyncCallback,
+  AsyncValidationParams,
+  RequiredObjInput,
+  ComputeOnceOut,
+  ParsedFiles
 };

@@ -1,19 +1,17 @@
 import type {
   ArrayStateOutput,
   AsyncValidationParams,
-  ComputeOnceOut,
   Config,
   IDTrackUtil,
   Input,
   InputStore,
   ObjInput,
   ObjStateOutput,
-  ParsedFiles,
   RequiredInput,
-  RequiredObjInput,
   StateType,
   StringStateOutput,
-  TrackUtil
+  TrackUtil,
+  ValuesType
 } from "./types";
 import {
   commonProps,
@@ -24,7 +22,7 @@ import {
   validateState
 } from "./util";
 import { asyncValidation, validate } from "./util/validation";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { H, persist } from "./util/helper";
 import { createStore } from "aio-store/react";
 
@@ -42,7 +40,7 @@ const populate = (state: any, type: StateType, config: Config) => {
     final[parseKey] = v;
     helper.s[parseKey] = { ...v };
   }
-  const entry = helper.clean(matchRules(final, helper)) as RequiredObjInput;
+  const entry = helper.clean(matchRules(final, helper));
   const isValid = validateState(entry);
   return {
     entry,
@@ -53,32 +51,19 @@ const populate = (state: any, type: StateType, config: Config) => {
   };
 };
 
-const computeOnce = (initialState: any, type: StateType, config: Config) => {
+const computeOnce = (
+  initialState: any,
+  type: StateType,
+  config: Config,
+  selective?: string
+) => {
   if (config.persistID && persist.p[config.persistID]) {
     return persist.p[config.persistID];
   }
 
   const store = createStore(populate(initialState, type, config));
-
   const initialForm = store.get("entry");
-
-  store.set((ref) => {
-    for (const key in initialForm) {
-      ref.entry[key].onChange = (event) => {
-        return onChange(
-          initialForm[key],
-          event.nativeEvent.target as HTMLInputElement,
-          store as InputStore,
-          config
-        );
-      };
-      ref.entry[key].files = [];
-    }
-  });
-  const getValues = (name?: string) => {
-    const values = extractValues(store.get("entry"));
-    return name ? values[name] : values;
-  };
+  const getValues = () => extractValues(store.get("entry"));
   const reset = () => {
     store.set((ref) => {
       ref.entry = initialForm;
@@ -91,7 +76,18 @@ const computeOnce = (initialState: any, type: StateType, config: Config) => {
     config.trackID.reset = reset;
     config.trackID.isValid = () => store.get("isValid");
   }
-  const result: ComputeOnceOut = { reset, getValues, store };
+  const result = {
+    set: (input: Input, value: ValuesType) => {
+      return onChange(
+        (selective ? initialForm[selective] : input) as RequiredInput,
+        selective ? input : value,
+        store as InputStore
+      );
+    },
+    reset,
+    getValues,
+    store
+  };
   if (config.persistID) {
     persist.p[config.persistID] = result;
   }
@@ -104,10 +100,16 @@ const initInputs = (
   config: Config,
   selective?: string
 ) => {
-  const { store, reset, getValues } = useMemo(
-    () => computeOnce(initialState, type, config),
+  const { store, set, reset, getValues } = useMemo(
+    () => computeOnce(initialState, type, config, selective),
     []
   );
+
+  useEffect(() => {
+    return () => {
+      !config.persistID && reset();
+    };
+  }, [config.persistID, reset]);
 
   const { entry, isValid } = store();
 
@@ -115,6 +117,7 @@ const initInputs = (
 
   return [
     type === "object" ? inputs : transform(inputs, "array"),
+    set,
     { isValid, reset, getValues }
   ];
 };
@@ -123,14 +126,14 @@ const asyncCallback = ({
   valid: asyncValid,
   em: asyncErrorMessage,
   entry,
-  store
+  inputStore
 }: AsyncValidationParams) => {
   // Clone inputs
-  const clone = store.get("entry");
+  const clone = inputStore.get("entry");
   const ID = entry.id;
   // Revalidate input, maybe a change occurs before server response
   const { valid, em } = validate(
-    store.get("helper"),
+    inputStore.get("helper"),
     clone,
     ID,
     clone[ID].value
@@ -142,111 +145,32 @@ const asyncCallback = ({
   // Finish calling server
   clone[ID].validating = false;
   // Sync changes
-  syncChanges(store, clone);
-};
-
-const createFiles = (
-  files: FileList | null,
-  clone: RequiredObjInput,
-  ID: string,
-  store: InputStore,
-  config: Config
-) => {
-  const entry = clone[ID];
-  const parsed: ParsedFiles[] = entry.mergeChanges ? [...entry.files] : [];
-  //  const dataTransfer = new DataTransfer();
-  if (!entry.mergeChanges) {
-    entry.files.forEach((p) => URL.revokeObjectURL(p.url));
-  }
-  if (files) {
-    for (let i = 0; i < files.length; i++) {
-      const file: ParsedFiles = {
-        url: URL.createObjectURL(files[i]),
-        key: crypto.randomUUID(),
-        file: files[i],
-        onLoad: () => {
-          !config.persistID && URL.revokeObjectURL(file.url);
-        },
-        selfRemove: () => {
-          store.set((ref) => {
-            const files = ref.entry[entry.id].files;
-            const newFiles = files.filter((f) => f.key !== file.key);
-            // Validate input
-            const { valid, em } = validate(
-              store.get("helper"),
-              clone,
-              ID,
-              newFiles
-            );
-            ref.entry[entry.id].files = newFiles;
-            ref.entry[entry.id].valid = valid;
-            ref.entry[entry.id].errorMessage = em;
-            // Validate form
-            ref.isValid = validateState(ref.entry);
-          });
-        },
-        selfUpdate: (data: any) => {
-          store.set((ref) => {
-            const files = ref.entry[entry.id].files;
-            const index = files.findIndex((f) => f.key === file.key);
-            files[index].updatedFile = data;
-            ref.entry[entry.id].files = files;
-          });
-        },
-        updatedFile: null
-      };
-      parsed.push(file);
-      //  dataTransfer.items.add(files[i]);
-    }
-  }
-  return parsed;
+  syncChanges(inputStore, clone);
 };
 
 const onChange = (
   input: RequiredInput,
-  element: HTMLInputElement,
-  store: InputStore,
-  config: Config
+  value: ValuesType,
+  inputStore: InputStore
 ) => {
   // Clone inputs
-  const clone = store.get("entry");
+  const clone = inputStore.get("entry");
   const ID = input.id;
-  // Get the value based on type
-  const value =
-    input.type === "file"
-      ? createFiles(element.files, clone, ID, store, config)
-      : element.value;
-
   // Validate inputs
-  const { valid, em } = validate(store.get("helper"), clone, ID, value);
-  // Handle type file
-  if (input.type === "file") {
-    clone[ID].files = value as ParsedFiles[];
-  } else if (input.type === "radio") {
-    // Check right radio input
-    for (const key in clone) {
-      if (clone[key].type === "radio") {
-        clone[key].checked = clone[key].value === value;
-      }
-    }
-  } else if (input.type === "checkbox") {
-    // Toggle the checkbox input
-    clone[ID].checked = !clone[ID].checked;
-  } else {
-    // Parse value if valid and if number
-    clone[ID].value = valid
-      ? input.type === "number" ||
-        input.validation?.number ||
-        input.validation?.min ||
-        input.validation?.max
-        ? Number(value)
-        : value
-      : value;
-  }
+  const { valid, em } = validate(inputStore.get("helper"), clone, ID, value);
+  // Parse value if valid and if number
+  clone[ID].value = valid
+    ? input.type === "number" ||
+      input.validation?.number ||
+      input.validation?.min ||
+      input.validation?.max
+      ? Number(value)
+      : value
+    : value;
   // Touched input
   clone[ID].touched = true;
   // Set valid to false if async is present else keep validation result
-  clone[ID].valid = (input.validation?.asyncCustom as unknown) ? false : valid;
+  clone[ID].valid = input.validation?.async ? false : valid;
   // Set errorMessage only if invalid if not keep the default errorMessage structure, Object or undefined
   clone[ID].errorMessage = !valid ? em : em instanceof Object ? {} : undefined;
   /* if it is valid then if async is true, we set validating to true otherwise false
@@ -256,18 +180,32 @@ const onChange = (
    * validating prop is responsible to show async validation loading
    * */
   // If all change are valid and async is there, we set valid to false else true
-  clone[ID].validating = valid ? !!input.validation?.asyncCustom : false;
+  clone[ID].validating = valid ? !!input.validation?.async : false;
+
+  // Check right radio input
+  if (input.type === "radio") {
+    for (const key in clone) {
+      const i = clone[key];
+      if (clone[key].type === "radio") {
+        clone[key].checked = i.value === value;
+      }
+    }
+  }
+  // Toggle the checkbox input
+  if (input.type === "checkbox") {
+    clone[ID].checked = !clone[ID].checked;
+  }
 
   // if valid and async is there, we call async validation
   valid &&
-    (input.validation?.asyncCustom as unknown) &&
-    asyncValidation(store, clone, ID, value, asyncCallback);
+    input.validation?.async &&
+    asyncValidation(inputStore, clone, ID, value, asyncCallback);
   // we sync changes
-  syncChanges(store, clone);
+  syncChanges(inputStore, clone);
 };
 
-const syncChanges = (store: InputStore, data: RequiredObjInput) => {
-  store.set((ref) => {
+const syncChanges = (inputStore: InputStore, data: ObjInput) => {
+  inputStore.set((ref) => {
     ref.entry = data;
     ref.isValid = validateState(data);
   });
