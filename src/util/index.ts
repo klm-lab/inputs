@@ -10,6 +10,7 @@ import type {
 } from "../types";
 import { deepMatch, parseCopy } from "./validation";
 import type { H } from "./helper";
+import { parseValue } from "../inputs/handlers/changes";
 
 const initValidAndTouch = (entry: Input) => {
   const validation = entry.validation;
@@ -311,7 +312,7 @@ const extractValues = (state: RequiredObjInput) => {
       result[K] =
         state[key].type === "file"
           ? cleanFiles(state[key].files)
-          : state[key].value;
+          : parseValue(state[key], state[key].value);
     }
   }
   return result;

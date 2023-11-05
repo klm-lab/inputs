@@ -60,6 +60,12 @@ type StringOrMap = string | { value: string; message: ErrorMessageType };
 
 type BooleanOrMap = boolean | { value?: boolean; message: ErrorMessageType };
 
+// type CustomNumber = "only" | "not-allowed" | "allowed";
+//
+// type CustomNumberOrMap =
+//   | CustomNumber
+//   | { value?: CustomNumber; message: ErrorMessageType };
+
 type NumberOrMap = number | { value: number; message: ErrorMessageType };
 
 type CopyKeyObjType = { value: string; omit: Set<keyof ValidationStateType> };
@@ -69,6 +75,9 @@ interface ValidationStateType {
   required?: BooleanOrMap;
   email?: BooleanOrMap;
   number?: BooleanOrMap;
+  // negativeNumber?: CustomNumberOrMap;
+  // expoNumber?: CustomNumberOrMap;
+  // floatingNumber?: CustomNumberOrMap;
   min?: NumberOrMap;
   max?: NumberOrMap;
   minLength?: NumberOrMap;
@@ -88,6 +97,9 @@ interface RequiredValidationStateType {
   required: BooleanOrMap;
   email: BooleanOrMap;
   number: BooleanOrMap;
+  // negativeNumber: CustomNumberOrMap;
+  // expoNumber: CustomNumberOrMap;
+  // floatingNumber: CustomNumberOrMap;
   min: NumberOrMap;
   max: NumberOrMap;
   minLength: NumberOrMap;

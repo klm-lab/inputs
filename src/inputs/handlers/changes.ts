@@ -87,7 +87,7 @@ const onChange = (
     clone[ID].checked = !clone[ID].checked;
   } else {
     // Parse value if valid and if number
-    clone[ID].value = valid ? parseValue(input, value) : value;
+    clone[ID].value = value;
   }
   // Touched input
   clone[ID].touched = true;
@@ -122,7 +122,11 @@ const syncChanges = (store: InputStore, data: RequiredObjInput) => {
 };
 
 export const parseValue = (input: RequiredInput, value: any) =>
-  input.type === "number" || input.validation?.number ? Number(value) : value;
+  input.type === "number" || input.validation?.number
+    ? !isNaN(Number(value))
+      ? Number(value)
+      : value
+    : value;
 
 export const inputChange = (
   value: any,

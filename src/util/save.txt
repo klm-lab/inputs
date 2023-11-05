@@ -1,0 +1,58 @@
+  // // NegativeNumber
+  // if (typeof rules.negativeNumber !== "undefined") {
+  //   const rule = getValue(rules.negativeNumber);
+  //   if (rule === "only") {
+  //     const r = value.toString().match(/-/gim);
+  //     valid =
+  //       !isNaN(value) &&
+  //       r !== null &&
+  //       r.length === 1 &&
+  //       value.toString().startsWith("-") &&
+  //       valid;
+  //   }
+  //   if (rule === "not-allowed") {
+  //     valid = !isNaN(value) && value.toString().indexOf("-") === -1 && valid;
+  //   }
+  // }
+  // if (!valid) {
+  //   return {
+  //     valid,
+  //     em: getErrorMessage(helper, rules.negativeNumber, target)
+  //   };
+  // }
+  //
+  // // FloatingNumber
+  // if (typeof rules.floatingNumber !== "undefined") {
+  //   const rule = getValue(rules.floatingNumber);
+  //   if (rule === "only") {
+  //     const r = value.toString().match(/\./gim);
+  //     valid = !isNaN(value) && r !== null && r.length === 1 && valid;
+  //   }
+  //   if (rule === "not-allowed") {
+  //     valid = !isNaN(value) && value.toString().indexOf(".") === -1 && valid;
+  //   }
+  // }
+  // if (!valid) {
+  //   return {
+  //     valid,
+  //     em: getErrorMessage(helper, rules.floatingNumber, target)
+  //   };
+  // }
+  //
+  // // ExpoNumber
+  // if (typeof rules.expoNumber !== "undefined") {
+  //   const rule = getValue(rules.expoNumber);
+  //   if (rule === "only") {
+  //     const r = value.toString().match(/e/gim);
+  //     valid = !isNaN(value) && r !== null && r.length === 1 && valid;
+  //   }
+  //   if (rule === "not-allowed") {
+  //     valid = !isNaN(value) && value.toString().indexOf("e") === -1 && valid;
+  //   }
+  // }
+  // if (!valid) {
+  //   return {
+  //     valid,
+  //     em: getErrorMessage(helper, rules.floatingNumber, target)
+  //   };
+  // }
