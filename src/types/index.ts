@@ -18,24 +18,15 @@ type HTMLInputTypeAttribute =
   | "range"
   //| "reset"
   | "search"
+  | "select"
   //| "submit"
   | "tel"
   | "text"
   | "time"
   | "url"
-  | "week"
-  | string;
+  | "week";
 
-type ValuesType = any;
-
-interface SpreadReactType {
-  id: string;
-  value: any;
-  type: HTMLInputTypeAttribute;
-  name?: string;
-  label?: string;
-  placeholder: StringOrObj;
-}
+type ValuesType = any | any[];
 
 interface CustomValidationType {
   (
@@ -131,13 +122,15 @@ interface Input {
   validation?: ValidationStateType;
 }
 
-interface ParsedFiles {
+interface ParsedFile {
   file: File;
   key: string;
   url: string;
-  updatedFile: any;
+  gettingFile: boolean;
+  fileUpdate: any;
 
   selfRemove(): void;
+
   onLoad(): void;
 
   selfUpdate(data: any): void;
@@ -150,7 +143,7 @@ interface RequiredInput {
   type: HTMLInputTypeAttribute;
   label: StringOrObj;
   value: ValuesType;
-  files: ParsedFiles[];
+  files: ParsedFile[];
   checked: boolean;
   multiple: boolean;
   mergeChanges: boolean;
@@ -161,8 +154,19 @@ interface RequiredInput {
   key: string;
   validation: RequiredValidationStateType;
   validating: boolean;
+  asyncValidationFailed: boolean;
 
-  onChange(event: SyntheticEvent<HTMLInputElement>): void;
+  onChange(event: SyntheticEvent<HTMLElement>): void;
+
+  onChange(value: any): void;
+
+  init(value: any, initFileConfig?: InitFileConfig): void;
+}
+
+interface InitFileConfig {
+  entryFormat?: "url" | "url[]";
+  proxyUrl?: string;
+  useDefaultProxyUrl?: boolean;
 }
 
 type ObjInput = {
@@ -173,9 +177,12 @@ type RequiredObjInput = {
   [key in string]: RequiredInput;
 };
 
-type ObjStateOutput<Key> = [{ [k in Key & string]: RequiredInput }, Form];
-type StringStateOutput = [RequiredInput, Form];
-type ArrayStateOutput = [RequiredInput[], Form];
+type ObjStateOutput<Key> = [
+  { [k in Key & string]: RequiredInput } & IsValid,
+  Form
+];
+type StringStateOutput = [RequiredInput & IsValid, Form];
+type ArrayStateOutput = [RequiredInput[] & IsValid, Form];
 
 type StateType = "object" | "array";
 
@@ -185,26 +192,54 @@ type Config = {
   trackID?: IDTrackUtil<string>;
 };
 
+interface IsValid {
+  isValid: boolean;
+}
+
 interface CommonForm {
   getValues(name?: string): any;
 
   getValues(): { [k in string]: any };
 
+  toObject(): RequiredObjInput & IsValid;
+
+  toArray(): RequiredInput[] & IsValid;
+
   reset(): void;
+
+  forEach(callback: ForEachCallback): void;
+
+  map(callback: MapCallback): unknown[];
+}
+
+type Method = "forEach" | "map";
+
+interface ForEachCallback {
+  (input: RequiredInput, index: number, array: RequiredInput[]): void;
+}
+
+interface MapCallback {
+  (input: RequiredInput, index: number, array: RequiredInput[]): unknown;
 }
 
 interface Form extends CommonForm {
-  isValid: boolean;
+  length: number;
 }
 
 interface IDTrackUtil<S> extends CommonForm {
-  id: S;
+  ID: S;
+  length: number;
 
   isValid(): boolean;
+
+  // todo, typing result
+  // useInputs(): any;
 }
 
 interface TrackUtil extends CommonForm {
   isValid(): boolean;
+
+  length(): number;
 }
 
 type InputStore = StoreType<{
@@ -219,11 +254,13 @@ type AsyncValidationParams = {
   em?: ErrorMessageType;
   entry: RequiredInput;
   store: InputStore;
+  failed?: boolean;
 };
 type AsyncCallback = (params: AsyncValidationParams) => void;
 
 interface ComputeOnceOut extends CommonForm {
   store: InputStore;
+  length: number;
 }
 
 export type {
@@ -244,7 +281,6 @@ export type {
   CopyKeyObjType,
   MergeType,
   CopyType,
-  SpreadReactType,
   Config,
   RequiredInput,
   IDTrackUtil,
@@ -253,5 +289,10 @@ export type {
   AsyncValidationParams,
   RequiredObjInput,
   ComputeOnceOut,
-  ParsedFiles
+  ParsedFile,
+  InitFileConfig,
+  ForEachCallback,
+  MapCallback,
+  Method,
+  IsValid
 };

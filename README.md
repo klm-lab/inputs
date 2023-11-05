@@ -285,52 +285,6 @@ There is no limit when you copy validation. But you must follow one rule.<br>
 > [!IMPORTANT]<br>
 > He who is copied must not copy himself or one of those who copy him**
 
-This is an example that leads to an infinite copy
-
-```js
-const [inputs] = useInputs({
-    homePhone: {
-        validation: {
-            required: true,
-            minLength: 10,
-            startsWith: "+",
-            copy: "officePhone"
-        }
-    },
-    officePhone: {
-        validation: {
-            regex: /..../,
-            copy: "homePhone"
-        }
-    }
-});
-```
-
-Here `officePhone` copy `homePhone` which copy `officePhone` and so on leading to an infinite copy.<br>
-If you want `homePhone` to copy `regex` validation from `officePhone` while `officePhone` copy validation
-from `homePhone`,<br>
-you can do it that way because at the end, they will share same validation rules.
-
-```js
-const [inputs] = useInputs({
-    homePhone: {
-        validation: {
-            required: true,
-            minLength: 10,
-            startsWith: "+",
-            // Move regex here
-            regex: /.../,
-        }
-    },
-    officePhone: {
-        validation: {
-            // we copy here
-            copy: "homePhone"
-        }
-    }
-});
-```
-
 You can copy as many as you want as long as you comply with the above rule. Here for example, `username`
 copy `firstname` who copy `name`, when `grandPa` copy `firstname` and so on . The order doesn't matter
 
@@ -507,7 +461,9 @@ const [inputs] = useInputs({
 
 ## Handle input changes
 
-* **String update** <br>If you pass a string, handle change like this, and we will take care of all other stuff
+Your can handle change with `input.onChange`.It accepts event from native input or any custom value.
+
+* **String update** <br>If you pass a string, handle change like this.
 
 ```js
 const [input] = useInputs("name");
@@ -515,8 +471,7 @@ const [input] = useInputs("name");
 <input value={input.value} onChange={input.onChange}/>
 ```
 
-* **Array of string update** <br>If you pass an array of string, handle change like this, and we will take care of all
-  other stuff
+* **Array of string update** <br>If you pass an array of string, handle change like this.
 
 ```js
 const [inputs] = useInputs(["name", "firstname"]);
@@ -528,7 +483,7 @@ const [inputs] = useInputs(["name", "firstname"]);
 </div>
 ```
 
-* **Object update** <br>If you pass an object, handle change like this, and we will take care of all other stuff
+* **Object update** <br>If you pass an object, handle change like this.
 
 ```js
 const [inputs] = useInputs({
@@ -604,7 +559,7 @@ const [inputs] = useInputs({
   name: {
     validation: {
       //  setErrorMessage is optionnal. But you can use it to update the error message
-      asynCustom: async (value, setErrorMessage) => {
+      asyncCustom: async (value, setErrorMessage) => {
         const r = await someting;
         !r.valid && setErrorMessage("Not available")
         return r.valid
@@ -614,9 +569,6 @@ const [inputs] = useInputs({
   // async delay value => 2000
 }, {asyncDelay: 2000})
 ```
-
-**What happen if I didn't set `asyncDelay` config ?**<br>
-The default value will be used. The default value is `800` ms
 
 * **Asynchronous indicator**<br>
   You can show some loader when doing asynchronous validation.<br>
@@ -640,13 +592,34 @@ const [inputs] = useInputs({
 inputs.username.validating && <span>Validating your username ....</span>
 ```
 
+## IsValid
+
+To know if all your inputs are valid, use the `isValid` property bound to your inputs.
+
+```js
+const [inputs] = useInputs(...)
+
+const submit = () => {
+    if (inputs.isValid) {
+        // Submit
+    }
+}
+
+<button className={inputs.isValid ? validClass : invalidClass} onClick={submit}>Submit</button>
+```
+
 ## Form object
 
+The form object is immutable. It will never change once created. You can safely use it in `useEffect`.<br>
 In the `form` object, you have access to some useful properties. <br>
-
 * `reset` let you reset a form when you successfully submit<br>
 * `getValues` Return an object version of your inputs values.<br>
-* `isValid` tell you if the whole form is valid, if all your inputs are valid<br>
+* `toObject` Return an object version of your inputs.
+* `toArray` Return an array version of your inputs.
+* `forEach` Loop through each input.
+* `map` Loop through each input with return capabilities.
+* `length` inputs length.
+
 
 ### Reset
 
@@ -656,16 +629,49 @@ const [inputs, form] = useInputs(...)
 // Reset your form
 form.reset()
 ```
+### ToArray
+
+```js
+const [myInputs, setMyInputs, form] = useInputs({...})
+
+
+const myArrayFrom = form.toArray()
+```
+
+### ToObject
+It is a good practice to always add an `id` to your inputs. The `id` property is used when you transform your inputs.
+If `id` is not found, we use a generated one. So if you do not provide `id`, do a console.log(...) to see your transformed inputs.
+
+```js
+const [myInputs, setMyInputs, form] = useInputs([...])
+
+
+const myObjectFrom = form.toObject()
+```
+
 
 ### GetValues
 
-`getValues` take an optional argument that match the `name` of your inputs.
+`getValues` take an optional argument that match the `name` of your inputs to proper handle radio and checkbox if they are present<br>
+>[!NOTE]<br>
+> When using an array of string, Every string in that array is a `name`.<br>
+> When the array contains object, the name is generated if not provided.<br>
+> When using plain object, the name is the key of the object if not provided.<br>
+> * In `useInputs("username")`, name is `username`
+> * In `useInputs(["phone","age"])`, name are `phone` and `age`
+> * In `useInputs(["phone",{validation: ...}])`, name are `phone` and a generated one
+> * In `useInputs(["phone",{name: "age",validation: ...}])`, name are `phone` and `age`
+> * In `useInputs({contact : {}})`, name is `contact`
+> * In `useInputs({contact : {name: "customName"}})`, name is `customName`
+ 
+Now get your values
+
 
 ```js
 const [inputs, form] = useInputs(...)
 
 const submit = () => {
-    if (form.isValid) {
+    if (inputs.isValid) {
        const allValues = form.getValues();
        // Your stuff
 
@@ -677,26 +683,12 @@ const submit = () => {
     }
 }
 
-<button className={form.isValid ? validClass : invalidClass} onClick={submit}>Submit</button>
-```
-
-### IsValid
-
-```js
-const [inputs, form] = useInputs(...)
-
-const submit = () => {
-    if (form.isValid) {
-        // Submit
-    }
-}
-
-<button className={form.isValid ? validClass : invalidClass} onClick={submit}>Submit</button>
+<button className={inputs.isValid ? validClass : invalidClass} onClick={submit}>Submit</button>
 ```
 
 ## Global Inputs
 
-Useful if you want to Handle your inputs data step by step. First import `trackInputs` and use it like below <br>
+Useful if you want to Handle your inputs data step by step or access your inputs data outside a component. First import `trackInputs` and use it like below <br>.
 
 ### Setup trackID
 
@@ -710,15 +702,11 @@ export const track = trackInputs(["STEP_1", "STEP_2"]);
 
 const ComponentStep1 = () => {
     const [inputs] = useInputs(..., {trackID: track.STEP_1})
-
-    return
 ...
 }
 
 const ComponentStep2 = () => {
     const [inputs] = useInputs(..., {trackID: track.STEP_2})
-
-    return
 ...
 }
 
@@ -734,8 +722,6 @@ You can persist data on component unmount with a `persistID`.
 
 const ComponentStep1 = () => {
   const [inputs] = useInputs(..., {persistID: "ComponentStep1_ID"})
-    
-    return ...
 }
 ```
 
@@ -770,6 +756,21 @@ track.STEP_2.reset()
 
 ```
 
+## Load data for edit
+
+Use the `init` function of your inputs to load data for an edit.<br>
+If your inputs contains a file, your need to specify the entryFormat plus some optional configurations.
+
+### Configuration for a file (image etc...)
+* `entryFormat` : required. type => `url` | `url[]`,
+* `useDefaultProxyUrl`: Optional, type => `boolean`,
+* `proxyUrl`: Optional, type => `string`,
+
+When retrieving a blob from your url, if you see a cors error,<br>
+set up a proxyUrl or use the default one `cors-anywhere.herokuapp.com` by setting `useDefaultProxyUrl` to true.<br>
+
+**Look at this example 👉** [HERE][edit-link]
+
 ## Input properties
 
 These are automatically added to your state when your call `useInputs`. You can override some of them.<br>
@@ -778,29 +779,32 @@ You can also add any custom property that fits your need
 * `id` input id. `<-- overridable` as string
 * `key` A crypto-based key for your input. `<-- not overridable`
 * `name` Input name. `<-- overridable` as string.
-* `type` Html input element type. `<-- overridable`
+* `type` Html input element type and `select` for select HtmlInputElement. `<-- overridable`
 * `label` Input label. `<-- overridable` as string or ({en: "", fr: "", ...}).
-* `value` Input value. `<-- overridable but will change on user input`
+* `value` Input value. `<-- overridable but will change on user input`, Can be an array if `multiple` is true
 * `files` File Input files. `<-- not overridable`. Check his properties <a href="#files-properties">HERE</a>
 * `checked` Input check state. `<-- overridable but will change on user input`, for radio and checkbox
-* `multiple` File input multiple upload. `<-- overridable`, as boolean
+* `multiple` File input multiple upload or multiple select. `<-- overridable`, as boolean
 * `mergeChanges` If file input should merge uploaded files. `<-- overridable`, as boolean
 * `valid` Tell you if input is valid or not. `<-- overridable but can change on user input based on validation`
 * `touched` Tell you if input is touched or not. `<-- overridable but will change on user input`
 * `placeholder` Input placeholder. `<-- overridable` as string or ({en: "", fr: "", ...}).
 * `errorMessage` General error message when input is invalid. `<-- overridable` as string or ({en: "", fr: "", ...}).
 * `validating` Tell you if an asynchronous validation is in processing state
+* `asyncValidationFailed` Tell you if an asynchronous validation failed
 * `validation` Validation options. See the validation properties <a href="#validation-properties">HERE</a> `<-- overridable`
-* `onChange` Input changes handler `<-- not overridable`
+* `onChange` Input changes handler `<-- not overridable`, take an Event<HtmlElement> or a value of your choice as argument
+* `init` `<-- not overridable`, use this function to init your inputs with data for an edit for example. More <a href="#load-data-for-edit">HERE</a>
 
 
 ### Files properties
-Files is an array of a file with following properties
+Files is an array of file with following properties
 
 * `file` The original uploaded file. `<-- File`
 * `url` An unique url to preview the file. `<-- string>`.
+* `gettingFile` True is trying to retrieve a blob File from an url `<-- boolean>`.
 * `key` A crypto-based key for the file `<-- string`
-* `updatedFile` This is where you place any update that happens on the file.(Edit on canvas and so on) `<-- any`
+* `fileUpdate` This is where you place any update that happens on the file.(Edit on canvas and so on) `<-- any`
 * `selfRemove` A function that remove the file. `<-- () => void`
 * `selfUpdate` A function that update the file. `<-- (yourUpdate: any) => void`
 * `onLoad` A function that revoke the file url after preview load. This happens only if no `persistID` is found. `<-- () => void`
@@ -808,7 +812,6 @@ Files is an array of a file with following properties
 ### Validation properties
 
 * `required` Make the value required. `<-- boolean`
-* `asyncCustom` A function that must return a Promise<boolean>. `<-- (value, setErrorMessage?) => Promise<boolean>`.
 * `email` Treat the value as email `<-- boolean`
 * `number` Treat the value as a number. `<-- boolean`
 * `min` The minimum acceptable value. `<-- number`
@@ -823,6 +826,7 @@ Files is an array of a file with following properties
 * `endsWith` The input will end with that value. `<-- string`
 * `regex` Your regex validation. `<-- regex`
 * `custom` A function that must return a boolean. `<-- (value, setErrorMessage?) => boolean`.
+* `asyncCustom` A function that must return a Promise<boolean>. `<-- (value, setErrorMessage?) => Promise<boolean>`.
 
 ### Validation properties with specific error message
 
@@ -881,6 +885,7 @@ validation: {
 
 [version-shield]: https://img.shields.io/npm/v/aio-inputs?style=for-the-badge
 [example-links]: https://github.com/klm-lab/inputs/tree/dev/examples#readme
+[edit-link]: https://github.com/klm-lab/inputs/blob/dev/examples/edit.tsx
 
 
 [license-url]: https://choosealicense.com/licenses/mit/

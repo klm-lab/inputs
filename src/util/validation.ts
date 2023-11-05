@@ -83,7 +83,7 @@ const deepMatch = (
         // We save omitted path for the current key
         helper.ok[stateKey].add(k);
       });
-      matchKeys.push(matchKey as string);
+      matchKeys.push(matchKey);
       // Next round with a new matchKey
       match(getValue(state[matchKey].validation![keyPath]), keyPath);
     } else {
@@ -113,6 +113,7 @@ const getErrorMessage = (helper: H, rule: any, target: string) => {
   return helper.em[target];
 };
 
+// Can be any rules
 const getValue = (rule: any) => {
   return rule?.constructor.name === "Object" ? rule.value : rule;
 };
@@ -131,6 +132,9 @@ const validate = (
 
   // Required
   if (typeof rules.required !== "undefined") {
+    if ((entry.type === "select" && entry.multiple) || entry.type === "file") {
+      valid = value !== null && value.length && valid;
+    }
     valid =
       typeof value === "string"
         ? value.trim() !== "" && valid
@@ -320,9 +324,9 @@ const validate = (
   }
   if (!entry.validation?.asyncCustom && typeof rules.custom !== "undefined") {
     let eM: ErrorMessageType | null = null;
-    valid = rules.custom(value, (m: ErrorMessageType) => (eM = m)) as boolean;
+    valid = rules.custom(value, (m: ErrorMessageType) => (eM = m));
     if ((typeof valid as unknown) !== "boolean") {
-      throw Error("Your custom response is not a boolean");
+      throw TypeError("Your custom response is not a boolean");
     }
     if (!valid) {
       return { valid, em: eM ?? helper.em[target] };
@@ -336,50 +340,44 @@ const asyncValidation = (
   store: InputStore,
   state: RequiredObjInput,
   target: string,
-  value: any,
+  value: unknown,
   callback: AsyncCallback
 ) => {
   const entry: RequiredInput = state[target];
   const helper = store.get("helper");
-  clearTimeout(helper.a[entry.key as string]);
-  helper.a[entry.key as string] = setTimeout(() => {
+  clearTimeout(helper.a[entry.key]);
+  helper.a[entry.key] = setTimeout(() => {
     // Save the time
-    const ST = helper.a[entry.key as string];
-    const rules: ValidationStateType = entry.validation || {};
-    if (typeof rules.asyncCustom !== "undefined") {
-      let eM: ErrorMessageType | null = null;
-      Promise.resolve(
-        rules.asyncCustom &&
-          rules.asyncCustom(value, (m: ErrorMessageType) => (eM = m))
-      )
-        .then((value) => {
-          if (typeof value !== "boolean") {
-            throw Error("Your custom response is not a boolean");
-          }
-          /* we check if time match the request id time
-           * If not, that means, another request has been sent.
-           * So we wait for that response
-           * */
-          if (ST === helper.a[entry.key as string]) {
-            callback({
-              valid: value,
-              em: eM ?? helper.em[target],
-              entry: entry,
-              store: store
-            });
-          }
-        })
-        .catch((error: any) => {
-          console.error(error);
+    const ST = helper.a[entry.key];
+    const rules: Required<ValidationStateType> = entry.validation;
+    let eM: ErrorMessageType | null = null;
+    Promise.resolve(rules.asyncCustom(value, (m: ErrorMessageType) => (eM = m)))
+      .then((value) => {
+        if (typeof value !== "boolean") {
+          throw TypeError("Your custom response is not a boolean");
+        }
+        /* we check if time match the request id time
+         * If not, that means, another request has been sent.
+         * So we wait for that response
+         * */
+        if (ST === helper.a[entry.key]) {
+          callback({
+            valid: value,
+            em: eM ?? helper.em[target],
+            entry: entry,
+            store: store
+          });
+        }
+      })
+      .catch((error) => {
+        console.error(error);
+        callback({
+          valid: false,
+          failed: true,
+          entry: entry,
+          store: store
         });
-    } else {
-      callback({
-        valid: entry.valid,
-        em: entry.errorMessage,
-        entry: entry,
-        store: store
       });
-    }
   }, store.get("asyncDelay"));
 };
 

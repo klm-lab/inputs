@@ -15,17 +15,20 @@
 </div>
 
 ## AIO-INPUTS VIDEOS TUTORIAL
-No tracking inputs [HERE][tracking-link]<br>
+Default inputs [HERE][tracking-link]<br>
 Tracking inputs [HERE][no-tracking-link]
 
 ## AIO-INPUTS CODE EXAMPLES
 
-| Input type | Code                                                                                                                          |
-|------------|-------------------------------------------------------------------------------------------------------------------------------|
-| radio      | [Radio inputs][radio-link]                                                                                                    |
-| checkbox   | [Checkbox inputs][checkbox-link]                                                                                              |
-| file       | [File inputs][file-link]|
-| ...rest    | [Other inputs][other-link] |
+| Input type or Action | Code                                   |
+|----------------------|----------------------------------------|
+| radio                | [Radio inputs][radio-link]             |
+| checkbox             | [Checkbox inputs][checkbox-link]       |
+| file                 | [File inputs][file-link]               |
+| select               | [Select inputs][select-link]           |
+| text                 | [Text inputs][text-link]               |
+| Tracking             | [Tracking inputs][tracking-input-link] |
+| Edit                 | [Edit inputs][edit-link]               |
 
 ## License
 
@@ -38,10 +41,13 @@ Tracking inputs [HERE][no-tracking-link]
 
 [version-shield]: https://img.shields.io/npm/v/aio-inputs?style=for-the-badge
 
-[radio-link]: https://github.com/klm-lab/inputs/blob/dev/examples/radio.ts
-[checkbox-link]: https://github.com/klm-lab/inputs/blob/dev/examples/checkbox.ts
-[file-link]: https://github.com/klm-lab/inputs/blob/dev/examples/file.ts
-[other-link]: https://github.com/klm-lab/inputs/blob/dev/examples/other.ts
+[radio-link]: https://github.com/klm-lab/inputs/blob/dev/examples/radio.tsx
+[checkbox-link]: https://github.com/klm-lab/inputs/blob/dev/examples/checkbox.tsx
+[file-link]: https://github.com/klm-lab/inputs/blob/dev/examples/file.tsx
+[select-link]: https://github.com/klm-lab/inputs/blob/dev/examples/select.tsx
+[text-link]: https://github.com/klm-lab/inputs/blob/dev/examples/text.tsx
+[tracking-input-link]: https://github.com/klm-lab/inputs/blob/dev/examples/tracking.tsx
+[edit-link]: https://github.com/klm-lab/inputs/blob/dev/examples/edit.tsx
 [tracking-link]: https://github.com/klm-lab/inputs/tree/dev/examples#readme
 [no-tracking-link]: https://github.com/klm-lab/inputs/tree/dev/examples#readme
 
