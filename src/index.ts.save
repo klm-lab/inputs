@@ -1,0 +1,286 @@
+import type {
+  ArrayStateOutput,
+  AsyncValidationParams,
+  Config,
+  IDTrackUtil,
+  Input,
+  InputStore,
+  ObjInput,
+  ObjStateOutput,
+  RequiredInput,
+  StateType,
+  StringStateOutput,
+  TrackUtil,
+  ValuesType
+} from "./types";
+import {
+  commonProps,
+  extractValues,
+  matchRules,
+  TRACKING_KEYS,
+  transform,
+  validateState
+} from "./util";
+import { asyncValidation, validate } from "./util/validation";
+import { useEffect, useMemo } from "react";
+import { H, persist } from "./util/helper";
+import { createStore } from "aio-store/react";
+
+const populate = (state: any, type: StateType, config: Config) => {
+  const final = {} as ObjInput;
+  const helper = new H();
+  for (const stateKey in state) {
+    const parseKey = type === "object" ? stateKey : state[stateKey].id;
+    const key = crypto.randomUUID();
+    const v = {
+      ...commonProps(state[stateKey]),
+      ...state[stateKey],
+      ...(type === "object" ? { id: stateKey, key } : { key })
+    };
+    final[parseKey] = v;
+    helper.s[parseKey] = { ...v };
+  }
+  const entry = helper.clean(matchRules(final, helper));
+  const isValid = validateState(entry);
+  return {
+    entry,
+    isValid,
+    helper,
+    initialValid: isValid,
+    asyncDelay: config.asyncDelay ?? 800
+  };
+};
+
+const computeOnce = (
+  initialState: any,
+  type: StateType,
+  config: Config,
+  selective?: string
+) => {
+  if (config.persistID && persist.p[config.persistID]) {
+    return persist.p[config.persistID];
+  }
+
+  const store = createStore(populate(initialState, type, config));
+  const initialForm = store.get("entry");
+  const getValues = () => extractValues(store.get("entry"));
+  const reset = () => {
+    store.set((ref) => {
+      ref.entry = initialForm;
+      ref.isValid = store.get("initialValid");
+    });
+  };
+
+  if (config.trackID && config.trackID.id) {
+    config.trackID.getValues = getValues;
+    config.trackID.reset = reset;
+    config.trackID.isValid = () => store.get("isValid");
+  }
+  const result = {
+    set: (input: Input, value: ValuesType) => {
+      return onChange(
+        (selective ? initialForm[selective] : input) as RequiredInput,
+        selective ? input : value,
+        store as InputStore
+      );
+    },
+    reset,
+    getValues,
+    store
+  };
+  if (config.persistID) {
+    persist.p[config.persistID] = result;
+  }
+  return result;
+};
+
+const initInputs = (
+  initialState: any,
+  type: StateType,
+  config: Config,
+  selective?: string
+) => {
+  const { store, set, reset, getValues } = useMemo(
+    () => computeOnce(initialState, type, config, selective),
+    []
+  );
+
+  useEffect(() => {
+    return () => {
+      !config.persistID && reset();
+    };
+  }, [config.persistID, reset]);
+
+  const { entry, isValid } = store();
+
+  const inputs = selective ? entry[selective] : entry;
+
+  return [
+    type === "object" ? inputs : transform(inputs, "array"),
+    set,
+    { isValid, reset, getValues }
+  ];
+};
+
+const asyncCallback = ({
+  valid: asyncValid,
+  em: asyncErrorMessage,
+  entry,
+  inputStore
+}: AsyncValidationParams) => {
+  // Clone inputs
+  const clone = inputStore.get("entry");
+  const ID = entry.id;
+  // Revalidate input, maybe a change occurs before server response
+  const { valid, em } = validate(
+    inputStore.get("helper"),
+    clone,
+    ID,
+    clone[ID].value
+  );
+  // Add server validation only actual data is valid
+  clone[ID].valid = valid && asyncValid;
+  // Add server error message only actual data is valid else keep actual error Message
+  clone[ID].errorMessage = valid ? asyncErrorMessage : em;
+  // Finish calling server
+  clone[ID].validating = false;
+  // Sync changes
+  syncChanges(inputStore, clone);
+};
+
+const onChange = (
+  input: RequiredInput,
+  value: ValuesType,
+  inputStore: InputStore
+) => {
+  // Clone inputs
+  const clone = inputStore.get("entry");
+  const ID = input.id;
+  // Validate inputs
+  const { valid, em } = validate(inputStore.get("helper"), clone, ID, value);
+  // Parse value if valid and if number
+  clone[ID].value = valid
+    ? input.type === "number" ||
+      input.validation?.number ||
+      input.validation?.min ||
+      input.validation?.max
+      ? Number(value)
+      : value
+    : value;
+  // Touched input
+  clone[ID].touched = true;
+  // Set valid to false if async is present else keep validation result
+  clone[ID].valid = input.validation?.async ? false : valid;
+  // Set errorMessage only if invalid if not keep the default errorMessage structure, Object or undefined
+  clone[ID].errorMessage = !valid ? em : em instanceof Object ? {} : undefined;
+  /* if it is valid then if async is true, we set validating to true otherwise false
+   * valid === false mean no need to call async,
+   * valid === true means we can call async if async is set to true by the user.
+   *
+   * validating prop is responsible to show async validation loading
+   * */
+  // If all change are valid and async is there, we set valid to false else true
+  clone[ID].validating = valid ? !!input.validation?.async : false;
+
+  // Check right radio input
+  if (input.type === "radio") {
+    for (const key in clone) {
+      const i = clone[key];
+      if (clone[key].type === "radio") {
+        clone[key].checked = i.value === value;
+      }
+    }
+  }
+  // Toggle the checkbox input
+  if (input.type === "checkbox") {
+    clone[ID].checked = !clone[ID].checked;
+  }
+
+  // if valid and async is there, we call async validation
+  valid &&
+    input.validation?.async &&
+    asyncValidation(inputStore, clone, ID, value, asyncCallback);
+  // we sync changes
+  syncChanges(inputStore, clone);
+};
+
+const syncChanges = (inputStore: InputStore, data: ObjInput) => {
+  inputStore.set((ref) => {
+    ref.entry = data;
+    ref.isValid = validateState(data);
+  });
+};
+
+function useInputs<S>(
+  initialState: ObjInput & S,
+  config?: Config
+): ObjStateOutput<keyof S>;
+function useInputs(initialState: Input[], config?: Config): ArrayStateOutput;
+function useInputs(
+  initialState: (string | Input)[],
+  config?: Config
+): ArrayStateOutput;
+function useInputs(initialState: string, config?: Config): StringStateOutput;
+
+function useInputs(initialState: any, config: Config = {}): any {
+  if (Array.isArray(initialState)) {
+    return initInputs(
+      initialState.map((entry, i) =>
+        typeof entry === "string"
+          ? { id: entry }
+          : entry.id
+          ? entry
+          : { id: `input_${i}`, ...entry }
+      ),
+      "array",
+      config
+    );
+  }
+  if (typeof initialState === "string") {
+    return initInputs({ [initialState]: {} }, "object", config, initialState);
+  }
+  return initInputs(initialState, "object", config);
+}
+
+function trackInputs<S extends string>(trackingID: S[]) {
+  const track = {} as any;
+  trackingID.forEach((a) => {
+    track[a] = {
+      id: a
+    };
+  });
+
+  track.getValues = () => {
+    let values = {} as any;
+    for (const t in track) {
+      if (!TRACKING_KEYS.includes(t) && track[t] && track[t].getValues) {
+        values = {
+          ...values,
+          ...track[t].getValues()
+        };
+      }
+    }
+    return values;
+  };
+  track.reset = () => {
+    for (const t in track) {
+      if (!TRACKING_KEYS.includes(t) && track[t] && track[t].reset) {
+        track[t].reset();
+      }
+    }
+  };
+
+  track.isValid = () => {
+    let isValid = true;
+    for (const t in track) {
+      if (!TRACKING_KEYS.includes(t) && track[t] && track[t].isValid) {
+        isValid = isValid && track[t].isValid();
+      }
+    }
+    return isValid;
+  };
+
+  return track as TrackUtil & { [k in S]: IDTrackUtil<S> };
+}
+
+export { useInputs, trackInputs };

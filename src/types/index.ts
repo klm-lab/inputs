@@ -1,8 +1,8 @@
-// __ => help us validate matched keys
-// ___ => help us save original errorMessage
+import type { StoreType } from "aio-store/react";
+import type { H } from "../util/helper";
+import type { SyntheticEvent } from "react";
 
 type HTMLInputTypeAttribute =
-  | "button"
   | "checkbox"
   | "color"
   | "date"
@@ -18,38 +18,28 @@ type HTMLInputTypeAttribute =
   | "range"
   //| "reset"
   | "search"
+  | "select"
   //| "submit"
   | "tel"
   | "text"
   | "time"
   | "url"
-  | "week"
-  | string;
+  | "week";
 
-type ValuesType = any;
-
-interface SpreadReactType {
-  id: string;
-  value: any;
-  type: HTMLInputTypeAttribute;
-  name?: string;
-  label?: string;
-  placeholder: StringOrObj;
-}
-
-interface Form {
-  isValid: boolean;
-
-  reset(): void;
-
-  getValues(): { [k in string]: any };
-}
+type ValuesType = any | any[];
 
 interface CustomValidationType {
   (
     value: ValuesType,
-    set?: (message: ErrorMessageType) => void
-  ): boolean | Promise<boolean>;
+    setErrorMessage?: (message: ErrorMessageType) => void
+  ): boolean;
+}
+
+interface CustomAsyncValidationType {
+  (
+    value: ValuesType,
+    setErrorMessage?: (message: ErrorMessageType) => void
+  ): Promise<boolean>;
 }
 
 type MatchResultType = {
@@ -77,7 +67,6 @@ type CopyType = { value: string; omit: (keyof ValidationStateType)[] };
 
 interface ValidationStateType {
   required?: BooleanOrMap;
-  async?: boolean;
   email?: BooleanOrMap;
   number?: BooleanOrMap;
   min?: NumberOrMap;
@@ -92,11 +81,11 @@ interface ValidationStateType {
   regex?: RegExp & any;
   copy?: CopyType;
   custom?: CustomValidationType;
+  asyncCustom?: CustomAsyncValidationType;
 }
 
 interface RequiredValidationStateType {
   required: BooleanOrMap;
-  async: boolean;
   email: BooleanOrMap;
   number: BooleanOrMap;
   min: NumberOrMap;
@@ -110,6 +99,7 @@ interface RequiredValidationStateType {
   endsWith: StringOrMap;
   regex: RegExp & any;
   copy: CopyType;
+  asyncCustom: CustomAsyncValidationType;
   custom: CustomValidationType;
 }
 
@@ -118,28 +108,45 @@ type ErrorMessageType = StringOrObj;
 
 interface Input {
   id?: string;
-  name?: StringOrObj;
+  name?: string;
   type?: HTMLInputTypeAttribute;
   label?: StringOrObj;
   value?: ValuesType;
-  resetValue?: ValuesType;
+  checked?: boolean;
+  multiple?: boolean;
+  mergeChanges?: boolean;
   valid?: boolean;
   touched?: boolean;
   placeholder?: StringOrObj;
   errorMessage?: ErrorMessageType;
-  key?: string;
   validation?: ValidationStateType;
-  validating?: boolean;
+}
+
+interface ParsedFile {
+  file: File;
+  key: string;
+  url: string;
+  gettingFile: boolean;
+  fileUpdate: any;
+
+  selfRemove(): void;
+
+  onLoad(): void;
+
+  selfUpdate(data: any): void;
 }
 
 // FOr some reason, Build-in Required doesn't work
 interface RequiredInput {
   id: string;
-  name: StringOrObj;
+  name: string;
   type: HTMLInputTypeAttribute;
   label: StringOrObj;
   value: ValuesType;
-  resetValue: ValuesType;
+  files: ParsedFile[];
+  checked: boolean;
+  multiple: boolean;
+  mergeChanges: boolean;
   valid: boolean;
   touched: boolean;
   placeholder: StringOrObj;
@@ -147,23 +154,35 @@ interface RequiredInput {
   key: string;
   validation: RequiredValidationStateType;
   validating: boolean;
+  asyncValidationFailed: boolean;
+
+  onChange(event: SyntheticEvent<HTMLElement>): void;
+
+  onChange(value: any): void;
+
+  init(value: any, initFileConfig?: InitFileConfig): void;
+}
+
+interface InitFileConfig {
+  entryFormat?: "url" | "url[]";
+  proxyUrl?: string;
+  useDefaultProxyUrl?: boolean;
 }
 
 type ObjInput = {
   [key in string]: Input;
 };
 
+type RequiredObjInput = {
+  [key in string]: RequiredInput;
+};
+
 type ObjStateOutput<Key> = [
-  { [k in Key & string]: RequiredInput },
-  (input: RequiredInput, value: any) => void,
+  { [k in Key & string]: RequiredInput } & IsValid,
   Form
 ];
-type StringStateOutput = [Input, (value: any) => void, Form];
-type ArrayStateOutput = [
-  RequiredInput[],
-  (input: RequiredInput, value: any) => void,
-  Form
-];
+type StringStateOutput = [RequiredInput & IsValid, Form];
+type ArrayStateOutput = [RequiredInput[] & IsValid, Form];
 
 type StateType = "object" | "array";
 
@@ -173,22 +192,75 @@ type Config = {
   trackID?: IDTrackUtil<string>;
 };
 
-interface IDTrackUtil<S> {
-  id: S;
-
-  getValues(): { [k in string]: any };
-
-  reset(): void;
-
-  isValid(): boolean;
+interface IsValid {
+  isValid: boolean;
 }
 
-interface TrackUtil {
+interface CommonForm {
+  getValues(name?: string): any;
+
   getValues(): { [k in string]: any };
+
+  toObject(): RequiredObjInput & IsValid;
+
+  toArray(): RequiredInput[] & IsValid;
 
   reset(): void;
 
+  forEach(callback: ForEachCallback): void;
+
+  map(callback: MapCallback): unknown[];
+}
+
+type Method = "forEach" | "map";
+
+interface ForEachCallback {
+  (input: RequiredInput, index: number, array: RequiredInput[]): void;
+}
+
+interface MapCallback {
+  (input: RequiredInput, index: number, array: RequiredInput[]): unknown;
+}
+
+interface Form extends CommonForm {
+  length: number;
+}
+
+interface IDTrackUtil<S> extends CommonForm {
+  ID: S;
+  length: number;
+
   isValid(): boolean;
+
+  // todo, typing result
+  // useInputs(): any;
+}
+
+interface TrackUtil extends CommonForm {
+  isValid(): boolean;
+
+  length(): number;
+}
+
+type InputStore = StoreType<{
+  entry: RequiredObjInput;
+  isValid: boolean;
+  helper: H;
+  initialValid: boolean;
+  asyncDelay: number;
+}>;
+type AsyncValidationParams = {
+  valid: boolean;
+  em?: ErrorMessageType;
+  entry: RequiredInput;
+  store: InputStore;
+  failed?: boolean;
+};
+type AsyncCallback = (params: AsyncValidationParams) => void;
+
+interface ComputeOnceOut extends CommonForm {
+  store: InputStore;
+  length: number;
 }
 
 export type {
@@ -209,7 +281,18 @@ export type {
   CopyKeyObjType,
   MergeType,
   CopyType,
-  SpreadReactType,
   Config,
-  IDTrackUtil
+  RequiredInput,
+  IDTrackUtil,
+  InputStore,
+  AsyncCallback,
+  AsyncValidationParams,
+  RequiredObjInput,
+  ComputeOnceOut,
+  ParsedFile,
+  InitFileConfig,
+  ForEachCallback,
+  MapCallback,
+  Method,
+  IsValid
 };

@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "moduleResolution": "node",
-    "target": "es2015",
+    "target": "ES2018",
     "esModuleInterop": true,
     "module": "ESNext",
     "lib": [
@@ -32,6 +32,7 @@
     "node_modules",
     "**/tests",
     "**/drafts",
-    "temp/**"
+    "temp/**",
+    "examples/**"
   ]
 }
