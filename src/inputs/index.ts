@@ -27,7 +27,8 @@ import { useMemo } from "react";
 import { H, persist } from "../util/helper";
 import { createStore } from "aio-store/react";
 import { retrieveBlob } from "./handlers/files";
-import { inputChange, parseValue } from "./handlers/changes";
+import { inputChange } from "./handlers/changes";
+import { parseValue } from "../util";
 
 const init = (
   input: RequiredInput,

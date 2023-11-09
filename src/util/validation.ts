@@ -129,11 +129,14 @@ const validate = (
   const rules: ValidationStateType = entry.validation || {};
   let valid: boolean = true;
   const em: ErrorMessageType | undefined = helper.em[target];
-
   // Required
   if (typeof rules.required !== "undefined") {
-    if ((entry.type === "select" && entry.multiple) || entry.type === "file") {
-      valid = value !== null && value.length && valid;
+    if (
+      (entry.type === "select" && entry.multiple) ||
+      entry.type === "file" ||
+      entry.type === "checkbox"
+    ) {
+      valid = value !== null && value.length > 0 && valid;
     }
     valid =
       typeof value === "string"

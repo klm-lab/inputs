@@ -10,6 +10,7 @@ import { asyncValidation, validate } from "../../util/validation";
 import { validateState } from "../../util";
 import { createFiles } from "./files";
 import { createSelectFiles } from "./select";
+import { createCheckboxValue } from "./checkbox";
 
 const asyncCallback = ({
   valid: asyncValid,
@@ -70,16 +71,20 @@ const onChange = (
       ? createSelectFiles(isEvent, element as HTMLSelectElement, clone, ID)
       : element.value;
 
+  const toValidate =
+    input.type === "checkbox" ? createCheckboxValue(clone, ID) : value;
+
   // Validate inputs
-  const { valid, em } = validate(store.get("helper"), clone, ID, value);
+  const { valid, em } = validate(store.get("helper"), clone, ID, toValidate);
   // Handle type file
   if (input.type === "file") {
     clone[ID].files = value as ParsedFile[];
   } else if (input.type === "radio") {
     // Check right radio input
     for (const key in clone) {
-      if (clone[key].type === "radio") {
+      if (clone[key].type === "radio" && clone[key].name === clone[ID].name) {
         clone[key].checked = clone[key].value === value;
+        clone[key].valid = true;
       }
     }
   } else if (input.type === "checkbox") {
@@ -120,13 +125,6 @@ const syncChanges = (store: InputStore, data: RequiredObjInput) => {
     ref.isValid = validateState(data);
   });
 };
-
-export const parseValue = (input: RequiredInput, value: any) =>
-  input.type === "number" || input.validation?.number
-    ? !isNaN(Number(value))
-      ? Number(value)
-      : value
-    : value;
 
 export const inputChange = (
   value: any,
