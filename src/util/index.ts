@@ -10,19 +10,20 @@ import type {
 } from "../types";
 import { deepMatch, parseCopy } from "./validation";
 import type { H } from "./helper";
-import { parseValue } from "../inputs/handlers/changes";
+
+const parseValue = (input: RequiredInput, value: any) =>
+  input.type === "number" || input.validation?.number
+    ? !isNaN(Number(value))
+      ? Number(value)
+      : value
+    : value;
 
 const initValidAndTouch = (entry: Input) => {
-  const validation = entry.validation;
-  const value = entry.value;
-  if (typeof validation === "undefined") {
-    return true;
-  }
-  if (!Object.keys(validation).length) {
-    return true;
-  }
-  //If value is provided then input is valid by default
-  return !["", 0, null, undefined].includes(value);
+  const validation = entry.validation || {};
+  const isValid = !Object.keys(validation).length;
+  // return !["", 0, null, undefined].includes(entry.value);
+  // return isValid ? !!entry.checked : false;
+  return isValid ?? false;
 };
 
 // Spread common props
@@ -210,6 +211,55 @@ const mcv = (
   return state;
 };
 
+const patchedCbR = (state: ObjInput) => {
+  const checkboxId: string[] = [];
+  const radioId: string[] = [];
+  const cbInput = {} as { [k in string]: any };
+  const rdInput = {} as { [k in string]: any };
+
+  for (const stateKey in state) {
+    const name = state[stateKey].name as string;
+    cbInput[name] = cbInput[name] ?? {};
+    rdInput[name] = rdInput[name] ?? {};
+    const validation = state[stateKey].validation;
+    const type = state[stateKey].type;
+    const checked = state[stateKey].checked;
+
+    // Patch checkbox and radio
+    if (type === "checkbox") {
+      checkboxId.push(stateKey);
+      if (validation) {
+        cbInput[name].validation = validation;
+        const df = cbInput[name].df;
+        if (checked && !df) {
+          cbInput[name].df = true;
+        }
+      }
+    }
+
+    if (type === "radio") {
+      radioId.push(stateKey);
+      const df = rdInput[name].df;
+      if (checked && !df) {
+        rdInput[name].df = true;
+      }
+    }
+  }
+
+  checkboxId.forEach((chId) => {
+    const name = state[chId].name as string;
+    state[chId].validation = state[chId].validation ?? cbInput[name].validation;
+    state[chId].valid = cbInput[name].df ?? state[chId].valid;
+  });
+
+  radioId.forEach((rId) => {
+    const name = state[rId].name as string;
+    state[rId].valid = rdInput[name].df ?? state[rId].valid;
+  });
+
+  return state;
+};
+
 /**
  *  Mr is matching rules
  * We check suspicious validation key and match key which is a typical scenario for password and confirm Password
@@ -226,6 +276,7 @@ const mcv = (
  *
  */
 const matchRules = (state: ObjInput, helper: H) => {
+  state = patchedCbR(state);
   for (const stateKey in state) {
     // we save the error message
     helper.em[stateKey] = state[stateKey].errorMessage;
@@ -256,6 +307,7 @@ const matchRules = (state: ObjInput, helper: H) => {
       state = mcv(helper, state, stateKey, matchKey, "match");
     }
   }
+
   return state;
 };
 
@@ -323,5 +375,6 @@ export {
   validateState,
   matchRules,
   transformToArray,
-  extractValues
+  extractValues,
+  parseValue
 };
