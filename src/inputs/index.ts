@@ -20,6 +20,7 @@ import {
   commonProps,
   extractValues,
   matchRules,
+  parseValue,
   transformToArray,
   validateState
 } from "../util";
@@ -28,7 +29,6 @@ import { H, persist } from "../util/helper";
 import { createStore } from "aio-store/react";
 import { retrieveBlob } from "./handlers/files";
 import { inputChange } from "./handlers/changes";
-import { parseValue } from "../util";
 
 const init = (
   input: RequiredInput,
@@ -206,7 +206,7 @@ const parsedInputs = (
 };
 
 function useInputs<S>(
-  initialState: ObjInput & S,
+  initialState: ObjInput,
   config?: Config
 ): ObjStateOutput<keyof S>;
 function useInputs(initialState: Input[], config?: Config): ArrayStateOutput;
