@@ -9,12 +9,12 @@ import type {
   IsValid,
   MapCallback,
   Method,
-  ObjInput,
   ObjStateOutput,
   RequiredInput,
   RequiredObjInput,
   StateType,
-  StringStateOutput
+  StringStateOutput,
+  ObjInput
 } from "../types";
 import {
   commonProps,
@@ -206,7 +206,7 @@ const parsedInputs = (
 };
 
 function useInputs<S>(
-  initialState: ObjInput,
+  initialState: ObjInput | S,
   config?: Config
 ): ObjStateOutput<keyof S>;
 function useInputs(initialState: Input[], config?: Config): ArrayStateOutput;
