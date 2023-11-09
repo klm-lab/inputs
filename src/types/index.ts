@@ -283,7 +283,6 @@ export type {
   Input,
   ValuesType,
   ValidationStateType,
-  ObjInput,
   StateType,
   CustomValidationType,
   MatchResultType,
@@ -306,5 +305,6 @@ export type {
   ForEachCallback,
   MapCallback,
   Method,
-  IsValid
+  IsValid,
+  ObjInput
 };
