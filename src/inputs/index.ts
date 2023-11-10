@@ -199,10 +199,12 @@ const parsedInputs = (
 
   const inputs = selective ? entry[selective] : entry;
 
+  const form = useMemo(() => rest, []);
+
   const parsedInputs =
     type === "object" ? inputs : transformToArray(inputs as RequiredObjInput);
   (parsedInputs as typeof parsedInputs & IsValid).isValid = isValid;
-  return [parsedInputs, rest];
+  return [parsedInputs, form];
 };
 
 function useInputs<S>(
