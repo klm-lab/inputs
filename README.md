@@ -879,7 +879,7 @@ validation: {
 [MIT][license-url]
 
 
-[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-inputs/2.0.6?style=for-the-badge
+[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-inputs/2.0.7?style=for-the-badge
 
 [license-shield]: https://img.shields.io/github/license/klm-lab/inputs?style=for-the-badge
 
