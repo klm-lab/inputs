@@ -112,10 +112,15 @@ export const blobStringJob = (
   index: number
 ) => {
   store.set((ref) => {
-    ref.entry[ID].files = [
-      ...ref.entry[ID].files,
-      parseFile(clone, ID, store, config, value, true, {} as File)
-    ];
+    ref.entry[ID].files[index] = parseFile(
+      clone,
+      ID,
+      store,
+      config,
+      value,
+      true,
+      {} as File
+    );
   });
   getFile(value, fileConfig).then((file) => {
     store.set((ref) => {
