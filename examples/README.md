@@ -35,7 +35,7 @@ Tracking inputs [HERE][no-tracking-link]
 [MIT][license-url]
 
 
-[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-inputs/2.0.7?style=for-the-badge
+[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-inputs/2.0.8?style=for-the-badge
 
 [license-shield]: https://img.shields.io/github/license/klm-lab/inputs?style=for-the-badge
 
@@ -48,8 +48,8 @@ Tracking inputs [HERE][no-tracking-link]
 [text-link]: https://github.com/klm-lab/inputs/blob/dev/examples/text.tsx
 [tracking-input-link]: https://github.com/klm-lab/inputs/blob/dev/examples/tracking.tsx
 [edit-link]: https://github.com/klm-lab/inputs/blob/dev/examples/edit.tsx
-[tracking-link]: https://github.com/klm-lab/inputs/tree/dev/examples#readme
-[no-tracking-link]: https://github.com/klm-lab/inputs/tree/dev/examples#readme
+[tracking-link]: https://www.youtube.com/watch?v=IfQF6mzlr7g&list=PLeoTz2yd9ubeOGn-BAe-39dEPhQJsrrRR
+[no-tracking-link]: https://www.youtube.com/watch?v=ChpXlWD11Ac&list=PLeoTz2yd9ubeOGn-BAe-39dEPhQJsrrRR&index=9
 
 
 
