@@ -109,7 +109,8 @@ export const blobStringJob = (
   ID: string,
   config: Config,
   fileConfig: InitFileConfig,
-  index: number
+  index: number,
+  valid: boolean
 ) => {
   store.set((ref) => {
     ref.entry[ID].files[index] = parseFile(
@@ -121,6 +122,7 @@ export const blobStringJob = (
       true,
       {} as File
     );
+    ref.entry[ID].valid = valid;
   });
   getFile(value, fileConfig).then((file) => {
     store.set((ref) => {
@@ -136,28 +138,21 @@ export const retrieveBlob = (
   clone: RequiredObjInput,
   ID: string,
   config: Config,
-  fileConfig: InitFileConfig
+  fileConfig: InitFileConfig,
+  valid: boolean
 ) => {
-  switch (fileConfig.entryFormat) {
-    case "url": {
-      blobStringJob(value, store, clone, ID, config, fileConfig, 0);
-      break;
-    }
-    case "url[]": {
-      (value as string[]).forEach((v, index) => {
-        blobStringJob(v, store, clone, ID, config, fileConfig, index);
-      });
-      break;
-    }
-    //todo add more case based on use cases
-    default: {
-      throw Error(
-        "EntryFormat is missing or incorrect in InitFileConfig on file " +
-          JSON.stringify(value),
-        {
-          cause: fileConfig
-        }
-      );
-    }
+  if (value instanceof Array) {
+    value.forEach((v, index) => {
+      blobStringJob(v, store, clone, ID, config, fileConfig, index, valid);
+    });
+    return;
   }
+  if (typeof value === "string") {
+    blobStringJob(value, store, clone, ID, config, fileConfig, 0, valid);
+    return;
+  }
+  throw Error(
+    "Format must be a string or an array of string for this file " +
+      JSON.stringify(value)
+  );
 };

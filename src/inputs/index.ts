@@ -29,6 +29,7 @@ import { H, persist } from "../util/helper";
 import { createStore } from "aio-store/react";
 import { retrieveBlob } from "./handlers/files";
 import { inputChange } from "./handlers/changes";
+import { validate } from "../util/validation";
 
 const init = (
   input: RequiredInput,
@@ -41,11 +42,13 @@ const init = (
   const clone = store.get("entry");
   const ID = input.id;
 
+  const { valid } = validate(store.get("helper"), clone, ID, value);
+
   /* Handle type file. It is async,
    * First, we send back an url
    * */
   if (input.type === "file") {
-    retrieveBlob(value, store, clone, ID, config, fileConfig);
+    retrieveBlob(value, store, clone, ID, config, fileConfig, valid);
     return;
   }
   if (input.type === "radio") {
@@ -61,6 +64,7 @@ const init = (
   // Sync handlers
   store.set((ref) => {
     ref.entry[ID] = clone[ID];
+    ref.entry[ID].valid = valid;
   });
 };
 
