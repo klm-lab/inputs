@@ -13,7 +13,8 @@ const TRACKING_KEYS = Object.freeze([
   "toObject",
   "forEach",
   "map",
-  "length"
+  "length",
+  "useValues"
 ]);
 
 export const trackInputs = <S extends string>(trackingID: S[]) => {
@@ -44,7 +45,7 @@ export const trackInputs = <S extends string>(trackingID: S[]) => {
     return arr;
   };
 
-  ["getValues", "toObject"].forEach((func) => {
+  ["getValues", "toObject", "useValues"].forEach((func) => {
     track[func] = () => {
       let result = {} as any;
       for (const t in track) {

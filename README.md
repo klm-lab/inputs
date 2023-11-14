@@ -756,6 +756,15 @@ track.STEP_2.reset()
 
 ```
 
+### Realtime values
+
+Use the hook `useValues` attached to your tracked inputs.
+```js
+const values = track.useValues();
+
+const valuesStep1 = track.STEP_1.useValues()
+```
+
 ## Load data for edit
 
 Use the `init` function of your inputs to load data for an edit.<br>
@@ -879,7 +888,7 @@ validation: {
 [MIT][license-url]
 
 
-[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-inputs/2.0.8?style=for-the-badge
+[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-inputs/2.0.9?style=for-the-badge
 
 [license-shield]: https://img.shields.io/github/license/klm-lab/inputs?style=for-the-badge
 

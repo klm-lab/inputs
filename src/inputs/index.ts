@@ -9,12 +9,12 @@ import type {
   IsValid,
   MapCallback,
   Method,
+  ObjInput,
   ObjStateOutput,
   RequiredInput,
   RequiredObjInput,
   StateType,
-  StringStateOutput,
-  ObjInput
+  StringStateOutput
 } from "../types";
 import {
   commonProps,
@@ -25,7 +25,7 @@ import {
   validateState
 } from "../util";
 import { useMemo } from "react";
-import { H, persist } from "../util/helper";
+import { He, persist } from "../util/helper";
 import { createStore } from "aio-store/react";
 import { retrieveBlob } from "./handlers/files";
 import { inputChange } from "./handlers/changes";
@@ -70,7 +70,7 @@ const init = (
 
 const populate = (state: any, type: StateType, config: Config) => {
   const final = {} as ObjInput;
-  const helper = new H();
+  const helper = He();
   for (const stateKey in state) {
     const parseKey = type === "object" ? stateKey : state[stateKey].id;
     const key = crypto.randomUUID();
@@ -98,8 +98,8 @@ const computeOnce = (
   type: StateType,
   config: Config
 ) => {
-  if (config.persistID && persist.p[config.persistID]) {
-    return persist.p[config.persistID];
+  if (config.persistID && persist[config.persistID]) {
+    return persist[config.persistID];
   }
 
   const store = createStore(populate(initialState, type, config));
@@ -180,10 +180,15 @@ const computeOnce = (
     config.trackID.reset = reset;
     config.trackID.isValid = () => store.get("isValid");
     config.trackID.length = length;
+    config.trackID.useValues = (name?: string) => {
+      const entry = store("entry");
+      const values = extractValues(entry);
+      return name ? values[name] : values;
+    };
   }
 
   if (config.persistID) {
-    persist.p[config.persistID] = result;
+    persist[config.persistID] = result;
   }
   return result;
 };

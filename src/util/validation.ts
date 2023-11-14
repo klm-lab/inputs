@@ -9,9 +9,9 @@ import type {
   RequiredInput,
   RequiredObjInput,
   ValidationStateType,
-  ValuesType
+  ValuesType,
+  Helper
 } from "../types";
-import type { H } from "./helper";
 
 const validateEmail = (email: string) => {
   const re =
@@ -44,7 +44,7 @@ const parseCopy = (
 
 // Deep match
 const deepMatch = (
-  helper: H,
+  helper: Helper,
   state: ObjInput,
   stateKey: string,
   matchKey: string,
@@ -106,7 +106,7 @@ const deepMatch = (
   return result;
 };
 
-const getErrorMessage = (helper: H, rule: any, target: string) => {
+const getErrorMessage = (helper: Helper, rule: any, target: string) => {
   if (rule && rule?.constructor.name === "Object") {
     return rule.message ?? helper.em[target];
   }
@@ -120,7 +120,7 @@ const getValue = (rule: any) => {
 
 // V is validate
 const validate = (
-  helper: H,
+  helper: Helper,
   state: RequiredObjInput,
   target: string,
   value: ValuesType
@@ -367,8 +367,8 @@ const asyncValidation = (
           callback({
             valid: value,
             em: eM ?? helper.em[target],
-            entry: entry,
-            store: store
+            entry,
+            store
           });
         }
       })
@@ -377,8 +377,8 @@ const asyncValidation = (
         callback({
           valid: false,
           failed: true,
-          entry: entry,
-          store: store
+          entry,
+          store
         });
       });
   }, store.get("asyncDelay"));
