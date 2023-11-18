@@ -1,5 +1,4 @@
 import type { StoreType } from "aio-store/react";
-import type { H } from "../util/helper";
 import type { SyntheticEvent } from "react";
 
 type HTMLInputTypeAttribute =
@@ -88,7 +87,7 @@ interface ValidationStateType {
   startsWith?: StringOrMap;
   endsWith?: StringOrMap;
   regex?: RegExp & any;
-  copy?: CopyType;
+  copy?: string | CopyType;
   custom?: CustomValidationType;
   asyncCustom?: CustomAsyncValidationType;
 }
@@ -110,7 +109,7 @@ interface RequiredValidationStateType {
   startsWith: StringOrMap;
   endsWith: StringOrMap;
   regex: RegExp & any;
-  copy: CopyType;
+  copy: string | CopyType;
   asyncCustom: CustomAsyncValidationType;
   custom: CustomValidationType;
 }
@@ -176,9 +175,10 @@ interface RequiredInput {
 }
 
 interface InitFileConfig {
-  entryFormat?: "url" | "url[]";
-  proxyUrl?: string;
-  useDefaultProxyUrl?: boolean;
+  // entryFormat?: "url" | "url[]";
+  // proxyUrl?: string;
+  // useDefaultProxyUrl?: boolean;
+  getBlob?(url: string): File;
 }
 
 type ObjInput = {
@@ -209,10 +209,6 @@ interface IsValid {
 }
 
 interface CommonForm {
-  getValues(name?: string): any;
-
-  getValues(): { [k in string]: any };
-
   toObject(): RequiredObjInput & IsValid;
 
   toArray(): RequiredInput[] & IsValid;
@@ -236,6 +232,7 @@ interface MapCallback {
 
 interface Form extends CommonForm {
   length: number;
+  getValues(name?: string): any;
 }
 
 interface IDTrackUtil<S> extends CommonForm {
@@ -244,20 +241,27 @@ interface IDTrackUtil<S> extends CommonForm {
 
   isValid(): boolean;
 
-  // todo, typing result
+  getValues(name?: string): any;
+
+  // Todo, typing result
   // useInputs(): any;
+  useValues(name?: string): any;
 }
 
 interface TrackUtil extends CommonForm {
   isValid(): boolean;
 
+  getValues(): any;
+
   length(): number;
+
+  useValues(): any;
 }
 
 type InputStore = StoreType<{
   entry: RequiredObjInput;
   isValid: boolean;
-  helper: H;
+  helper: Helper;
   initialValid: boolean;
   asyncDelay: number;
 }>;
@@ -273,9 +277,20 @@ type AsyncCallback = (params: AsyncValidationParams) => void;
 interface ComputeOnceOut extends CommonForm {
   store: InputStore;
   length: number;
+  getValues(name?: string): any;
+}
+
+interface Helper {
+  ok: { [k in string]: Set<keyof ValidationStateType> };
+  s: ObjInput;
+  em: { [k in string]: ErrorMessageType | undefined };
+  tm: { [k in string]: string[] };
+  a: { [k in string]: any };
+  clean(s: ObjInput): ObjInput;
 }
 
 export type {
+  Helper,
   TrackUtil,
   ObjStateOutput,
   ArrayStateOutput,

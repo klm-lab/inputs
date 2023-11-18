@@ -18,6 +18,9 @@
 Default inputs [HERE][tracking-link]<br>
 Tracking inputs [HERE][no-tracking-link]
 
+**DOCS WEBSITE 👉** [HERE][docs-site]<br/>
+**DOCS REPO 👉** [HERE][docs-repo]<br/>
+
 ## AIO-INPUTS CODE EXAMPLES
 
 | Input type or Action | Code                                   |
@@ -35,7 +38,7 @@ Tracking inputs [HERE][no-tracking-link]
 [MIT][license-url]
 
 
-[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-inputs/2.0.8?style=for-the-badge
+[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-inputs/2.0.9?style=for-the-badge
 
 [license-shield]: https://img.shields.io/github/license/klm-lab/inputs?style=for-the-badge
 
@@ -50,6 +53,9 @@ Tracking inputs [HERE][no-tracking-link]
 [edit-link]: https://github.com/klm-lab/inputs/blob/dev/examples/edit.tsx
 [tracking-link]: https://www.youtube.com/watch?v=IfQF6mzlr7g&list=PLeoTz2yd9ubeOGn-BAe-39dEPhQJsrrRR
 [no-tracking-link]: https://www.youtube.com/watch?v=ChpXlWD11Ac&list=PLeoTz2yd9ubeOGn-BAe-39dEPhQJsrrRR&index=9
+
+[docs-repo]: https://github.com/klm-lab/aio-inputs-docs#readme
+[docs-site]: https://aio-inputs.netlify.app
 
 
 

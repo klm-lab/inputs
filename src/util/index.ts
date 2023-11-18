@@ -6,10 +6,10 @@ import type {
   ParsedFile,
   RequiredInput,
   RequiredObjInput,
-  ValidationStateType
+  ValidationStateType,
+  Helper
 } from "../types";
 import { deepMatch, parseCopy } from "./validation";
-import type { H } from "./helper";
 
 const parseValue = (input: RequiredInput, value: any) =>
   input.type === "number" || input.validation?.number
@@ -43,7 +43,11 @@ const commonProps = (entry: Input, id: string) => {
   };
 };
 
-const setTrackingMatching = (helper: H, target: string, matchKey: string[]) => {
+const setTrackingMatching = (
+  helper: Helper,
+  target: string,
+  matchKey: string[]
+) => {
   if (helper.tm[target]) {
     return [...new Set([...helper.tm[target], ...matchKey])];
   } else {
@@ -118,7 +122,7 @@ const merge = (
 
 // Match and copy input validation
 const mcv = (
-  helper: H,
+  helper: Helper,
   state: ObjInput,
   stateKey: string,
   matchOrCopyKey: string,
@@ -134,7 +138,7 @@ const mcv = (
     matchResult = deepMatch(helper, state, stateKey, matchOrCopyKey, keyPath);
   } catch (_) {
     throw Error(
-      "It seems that we have infinite match here. Please make sure that the last matched or copied input does not match or copy anyone"
+      "It seems that an ID is missing or we have infinite match here. Please make sure that the copied or matched input has an id and the last matched or copied input does not match or copy anyone"
     );
   }
 
@@ -275,7 +279,7 @@ const patchedCbR = (state: ObjInput) => {
  * }.
  *
  */
-const matchRules = (state: ObjInput, helper: H) => {
+const matchRules = (state: ObjInput, helper: Helper) => {
   state = patchedCbR(state);
   for (const stateKey in state) {
     // we save the error message

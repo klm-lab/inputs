@@ -1,14 +1,15 @@
 {
   "name": "aio-inputs",
-  "version": "2.0.8",
+  "version": "2.0.9",
   "description": "An opinionated inputs state manager for react",
   "scripts": {
     "build": "npm ci && npm run build:noci",
     "build:noci": "npm run clean && npm run lint:prettier && npm run rollup",
     "lint:prettier": "npm run lint && npm run prettier",
     "build:dts": "dts-bundle-generator --config ./dts.json && npm run clean:temp",
-    "start": "npm run lint && npm run rollup",
-    "clean:start": "npm run clean && npm run lint && npm run rollup",
+    "start": "npm run lint && npm run rollup-dev",
+    "clean:start": "npm run clean && npm run lint && npm run rollup-dev",
+    "rollup-dev": "rollup -c --experimentalLogSideEffects true --watch && npm run build:dts",
     "rollup": "rollup -c && npm run build:dts",
     "prettier": "prettier ./src --write",
     "lint": "eslint ./src --ext .ts",
@@ -82,5 +83,6 @@
   },
   "peerDependencies": {
     "react": "^18.2.0"
-  }
+  },
+  "sideEffects": false
 }

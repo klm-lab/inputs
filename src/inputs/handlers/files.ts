@@ -88,19 +88,19 @@ export const parseFile = (
   };
 };
 
-export const getFile = async (url: string, fileConfig: InitFileConfig) => {
-  const URL = fileConfig.useDefaultProxyUrl
-    ? "cors-anywhere.herokuapp.com/" + url
-    : fileConfig.proxyUrl
-    ? fileConfig.proxyUrl + "/" + url
-    : url;
-  const blob = await fetch(URL).then((r) => r.blob());
-  const fileName = url.match(/([a-z0-9_-]+\.\w+)(?!.*\/)/gi);
-  const name = fileName ? fileName[0] : "";
-  return new File([blob], name, {
-    type: blob.type
-  });
-};
+// export const getFile = async (url: string, fileConfig: InitFileConfig) => {
+//   const URL = fileConfig.useDefaultProxyUrl
+//     ? "cors-anywhere.herokuapp.com/" + url
+//     : fileConfig.proxyUrl
+//     ? fileConfig.proxyUrl + "/" + url
+//     : url;
+//   const blob = await fetch(URL).then((r) => r.blob());
+//   const fileName = url.match(/([a-z0-9_-]+\.\w+)(?!.*\/)/gi);
+//   const name = fileName ? fileName[0] : "";
+//   return new File([blob], name, {
+//     type: blob.type
+//   });
+// };
 
 export const blobStringJob = (
   value: any,
@@ -119,17 +119,26 @@ export const blobStringJob = (
       store,
       config,
       value,
-      true,
+      !!fileConfig.getBlob, // true is getBlob is present
       {} as File
     );
     ref.entry[ID].valid = valid;
   });
-  getFile(value, fileConfig).then((file) => {
-    store.set((ref) => {
-      ref.entry[ID].files[index].gettingFile = false;
-      ref.entry[ID].files[index].file = file;
+  if (fileConfig.getBlob) {
+    Promise.resolve(fileConfig.getBlob(value)).then((file) => {
+      store.set((ref) => {
+        ref.entry[ID].files[index].gettingFile = false;
+        ref.entry[ID].files[index].file = file;
+      });
     });
-  });
+  }
+
+  // getFile(value, fileConfig).then((file) => {
+  //   store.set((ref) => {
+  //     ref.entry[ID].files[index].gettingFile = false;
+  //     ref.entry[ID].files[index].file = file;
+  //   });
+  // });
 };
 
 export const retrieveBlob = (
