@@ -138,7 +138,7 @@ const mcv = (
     matchResult = deepMatch(helper, state, stateKey, matchOrCopyKey, keyPath);
   } catch (_) {
     throw Error(
-      "It seems that we have infinite match here. Please make sure that the last matched or copied input does not match or copy anyone"
+      "It seems that an ID is missing or we have infinite match here. Please make sure that the copied or matched input has an id and the last matched or copied input does not match or copy anyone"
     );
   }
 

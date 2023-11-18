@@ -175,9 +175,10 @@ interface RequiredInput {
 }
 
 interface InitFileConfig {
-  entryFormat?: "url" | "url[]";
-  proxyUrl?: string;
-  useDefaultProxyUrl?: boolean;
+  // entryFormat?: "url" | "url[]";
+  // proxyUrl?: string;
+  // useDefaultProxyUrl?: boolean;
+  getBlob?(url: string): File;
 }
 
 type ObjInput = {
