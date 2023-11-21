@@ -342,11 +342,10 @@ const touchInput = (store: InputStore, helper: Helper) => {
           : input.value;
     }
 
-    const { em, valid } = validate(helper, data, formKey, value);
+    const { em } = validate(helper, data, formKey, value);
     data[formKey].touched = true;
     data[formKey].errorMessage = em;
-    data[formKey].valid = valid;
-    isValid = isValid && !data[formKey].validating && valid;
+    isValid = isValid && !data[formKey].validating;
   }
   store.set((ref) => {
     ref.entry = data;
