@@ -1,5 +1,6 @@
 import type {
   Config,
+  Helper,
   InputStore,
   ParsedFile,
   RequiredInput,
@@ -17,7 +18,8 @@ const asyncCallback = ({
   em: asyncErrorMessage,
   entry,
   store,
-  failed
+  failed,
+  helper
 }: AsyncValidationParams) => {
   // Clone inputs
   const clone = store.get("entry");
@@ -31,12 +33,7 @@ const asyncCallback = ({
   }
 
   // Revalidate input, maybe a change occurs before server response
-  const { valid, em } = validate(
-    store.get("helper"),
-    clone,
-    ID,
-    clone[ID].value
-  );
+  const { valid, em } = validate(helper, clone, ID, clone[ID].value);
   // Add server validation only actual data is valid
   clone[ID].valid = valid && asyncValid;
   // Add server error message only actual data is valid else keep actual error Message
@@ -52,7 +49,8 @@ const onChange = (
   element: HTMLInputElement | HTMLSelectElement,
   store: InputStore,
   config: Config,
-  isEvent: boolean
+  isEvent: boolean,
+  helper: Helper
 ) => {
   // Clone inputs
   const clone = store.get("entry");
@@ -65,7 +63,8 @@ const onChange = (
           clone,
           ID,
           store,
-          config
+          config,
+          helper
         )
       : input.type === "select" && input.multiple
       ? createSelectFiles(isEvent, element as HTMLSelectElement, clone, ID)
@@ -75,7 +74,7 @@ const onChange = (
     input.type === "checkbox" ? createCheckboxValue(clone, ID) : value;
 
   // Validate inputs
-  const { valid, em } = validate(store.get("helper"), clone, ID, toValidate);
+  const { valid, em } = validate(helper, clone, ID, toValidate);
   // Handle type file
   if (input.type === "file") {
     clone[ID].files = value as ParsedFile[];
@@ -114,7 +113,7 @@ const onChange = (
   // if valid and async is there, we call async validation
   valid &&
     (input.validation?.asyncCustom as unknown) &&
-    asyncValidation(store, clone, ID, value, asyncCallback);
+    asyncValidation(store, helper, clone, ID, value, asyncCallback);
   // we sync handlers
   syncChanges(store, clone);
 };
@@ -131,7 +130,8 @@ export const inputChange = (
   key: string,
   entry: RequiredObjInput,
   store: InputStore,
-  config: Config
+  config: Config,
+  helper: Helper
 ) => {
   const isEvent =
     ["SyntheticBaseEvent", "SyntheticEvent"].includes(value.constructor.name) ||
@@ -150,5 +150,5 @@ export const inputChange = (
     element.files = value.target.files || [];
     element.selectedOptions = value.target.selectedOptions || [];
   }
-  onChange(entry[key], element, store, config, isEvent);
+  onChange(entry[key], element, store, config, isEvent, helper);
 };

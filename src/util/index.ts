@@ -1,15 +1,16 @@
 import type {
+  Helper,
   Input,
+  InputStore,
   MatchResultType,
   MergeType,
   ObjInput,
   ParsedFile,
   RequiredInput,
   RequiredObjInput,
-  ValidationStateType,
-  Helper
+  ValidationStateType
 } from "../types";
-import { deepMatch, parseCopy } from "./validation";
+import { deepMatch, parseCopy, validate } from "./validation";
 
 const parseValue = (input: RequiredInput, value: any) =>
   input.type === "number" || input.validation?.number
@@ -33,7 +34,12 @@ const commonProps = (entry: Input, id: string) => {
     name: entry.name ?? entry.id ?? id,
     label: entry.label ?? entry.name ?? entry.id ?? id,
     type: entry.type ?? "text",
-    value: entry.type === "select" && entry.multiple ? [] : "",
+    value:
+      entry.type === "select" && entry.multiple
+        ? []
+        : entry.type === "radio"
+        ? "value-" + id
+        : "",
     checked: false,
     valid: initValidAndTouch(entry),
     touched: initValidAndTouch(entry),
@@ -226,6 +232,7 @@ const patchedCbR = (state: ObjInput) => {
     cbInput[name] = cbInput[name] ?? {};
     rdInput[name] = rdInput[name] ?? {};
     const validation = state[stateKey].validation;
+    const errorMessage = state[stateKey].errorMessage;
     const type = state[stateKey].type;
     const checked = state[stateKey].checked;
 
@@ -234,6 +241,7 @@ const patchedCbR = (state: ObjInput) => {
       checkboxId.push(stateKey);
       if (validation) {
         cbInput[name].validation = validation;
+        cbInput[name].errorMessage = errorMessage;
         const df = cbInput[name].df;
         if (checked && !df) {
           cbInput[name].df = true;
@@ -253,6 +261,8 @@ const patchedCbR = (state: ObjInput) => {
   checkboxId.forEach((chId) => {
     const name = state[chId].name as string;
     state[chId].validation = state[chId].validation ?? cbInput[name].validation;
+    state[chId].errorMessage =
+      state[chId].errorMessage ?? cbInput[name].errorMessage;
     state[chId].valid = cbInput[name].df ?? state[chId].valid;
   });
 
@@ -313,6 +323,35 @@ const matchRules = (state: ObjInput, helper: Helper) => {
   }
 
   return state;
+};
+
+// Validate the state
+// Set form is valid
+const touchInput = (store: InputStore, helper: Helper) => {
+  let isValid = true;
+  const data = store.get("entry");
+  for (const formKey in data) {
+    const input = data[formKey];
+    let value = input.value;
+    if (!input.touched) {
+      value =
+        input.type === "file" ||
+        (input.type === "select" && input.multiple) ||
+        input.type === "checkbox"
+          ? []
+          : input.value;
+    }
+
+    const { em, valid } = validate(helper, data, formKey, value);
+    data[formKey].touched = true;
+    data[formKey].errorMessage = em;
+    data[formKey].valid = valid;
+    isValid = isValid && !data[formKey].validating && valid;
+  }
+  store.set((ref) => {
+    ref.entry = data;
+  });
+  return isValid;
 };
 
 // Validate the state
@@ -380,5 +419,6 @@ export {
   matchRules,
   transformToArray,
   extractValues,
-  parseValue
+  parseValue,
+  touchInput
 };

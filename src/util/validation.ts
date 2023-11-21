@@ -341,13 +341,13 @@ const validate = (
 // Async validation
 const asyncValidation = (
   store: InputStore,
+  helper: Helper,
   state: RequiredObjInput,
   target: string,
   value: unknown,
   callback: AsyncCallback
 ) => {
   const entry: RequiredInput = state[target];
-  const helper = store.get("helper");
   clearTimeout(helper.a[entry.key]);
   helper.a[entry.key] = setTimeout(() => {
     // Save the time
@@ -368,7 +368,8 @@ const asyncValidation = (
             valid: value,
             em: eM ?? helper.em[target],
             entry,
-            store
+            store,
+            helper
           });
         }
       })
@@ -378,7 +379,8 @@ const asyncValidation = (
           valid: false,
           failed: true,
           entry,
-          store
+          store,
+          helper
         });
       });
   }, store.get("asyncDelay"));

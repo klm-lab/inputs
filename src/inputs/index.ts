@@ -3,6 +3,7 @@ import type {
   ComputeOnceOut,
   Config,
   ForEachCallback,
+  Helper,
   InitFileConfig,
   Input,
   InputStore,
@@ -21,10 +22,11 @@ import {
   extractValues,
   matchRules,
   parseValue,
+  touchInput,
   transformToArray,
   validateState
 } from "../util";
-import { useMemo } from "react";
+import { SyntheticEvent, useMemo } from "react";
 import { He, persist } from "../util/helper";
 import { createStore } from "aio-store/react";
 import { retrieveBlob } from "./handlers/files";
@@ -36,19 +38,20 @@ const init = (
   value: unknown,
   store: InputStore,
   config: Config,
-  fileConfig: InitFileConfig
+  fileConfig: InitFileConfig,
+  helper: Helper
 ) => {
   // Clone inputs
   const clone = store.get("entry");
   const ID = input.id;
 
-  const { valid } = validate(store.get("helper"), clone, ID, value);
+  const { valid } = validate(helper, clone, ID, value);
 
   /* Handle type file. It is async,
    * First, we send back an url
    * */
   if (input.type === "file") {
-    retrieveBlob(value, store, clone, ID, config, fileConfig, valid);
+    retrieveBlob(value, store, clone, ID, config, fileConfig, valid, helper);
     return;
   }
   if (input.type === "radio") {
@@ -104,13 +107,15 @@ const computeOnce = (
 
   const store = createStore(populate(initialState, type, config));
 
+  const helper = store.get("helper");
+
   store.set((ref) => {
     const entry = ref.entry;
     for (const key in entry) {
       ref.entry[key].onChange = (value) =>
-        inputChange(value, key, entry, store, config);
+        inputChange(value, key, entry, store, config, helper);
       ref.entry[key].init = (value, fileConfig: InitFileConfig = {}) =>
-        init(entry[key], value, store, config, fileConfig);
+        init(entry[key], value, store, config, fileConfig, helper);
       ref.entry[key].files = [];
     }
   });
@@ -118,8 +123,17 @@ const computeOnce = (
   const initialForm = store.get("entry");
 
   const getValues = (name?: string) => {
+    if (config.lockValuesOnError && !touchInput(store, helper)) {
+      return null;
+    }
     const values = extractValues(store.get("entry"));
     return name ? values[name] : values;
+  };
+
+  const onSubmit = (event: SyntheticEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    touchInput(store, helper);
   };
 
   const loop = (callback: ForEachCallback | MapCallback, method: Method) => {
@@ -168,7 +182,8 @@ const computeOnce = (
     toObject,
     forEach,
     map,
-    length
+    length,
+    onSubmit
   };
 
   if (config.trackID && config.trackID.ID) {
