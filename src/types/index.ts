@@ -202,6 +202,7 @@ type Config = {
   asyncDelay?: number;
   persistID?: string;
   trackID?: IDTrackUtil<string>;
+  lockValuesOnError?: boolean;
 };
 
 interface IsValid {
@@ -233,6 +234,7 @@ interface MapCallback {
 interface Form extends CommonForm {
   length: number;
   getValues(name?: string): any;
+  onSubmit(event: SyntheticEvent): void;
 }
 
 interface IDTrackUtil<S> extends CommonForm {
@@ -271,6 +273,7 @@ type AsyncValidationParams = {
   entry: RequiredInput;
   store: InputStore;
   failed?: boolean;
+  helper: Helper;
 };
 type AsyncCallback = (params: AsyncValidationParams) => void;
 
@@ -278,6 +281,7 @@ interface ComputeOnceOut extends CommonForm {
   store: InputStore;
   length: number;
   getValues(name?: string): any;
+  onSubmit(event: SyntheticEvent): void;
 }
 
 interface Helper {

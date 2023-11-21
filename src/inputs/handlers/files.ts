@@ -1,5 +1,6 @@
 import type {
   Config,
+  Helper,
   InitFileConfig,
   InputStore,
   ParsedFile,
@@ -13,7 +14,8 @@ export const createFiles = (
   clone: RequiredObjInput,
   ID: string,
   store: InputStore,
-  config: Config
+  config: Config,
+  helper: Helper
 ) => {
   const entry = clone[ID];
   const parsed: ParsedFile[] = entry.mergeChanges ? [...entry.files] : [];
@@ -31,7 +33,8 @@ export const createFiles = (
           config,
           URL.createObjectURL(files[i]),
           false,
-          files[i]
+          files[i],
+          helper
         )
       );
       //  dataTransfer.items.add(files[i]);
@@ -47,7 +50,8 @@ export const parseFile = (
   config: Config,
   url: string,
   gettingFile: boolean,
-  file: File
+  file: File,
+  helper: Helper
 ): ParsedFile => {
   const key = crypto.randomUUID();
   return {
@@ -72,12 +76,7 @@ export const parseFile = (
         const files = ref.entry[ID].files;
         const newFiles = files.filter((f) => f.key !== key);
         // Validate input
-        const { valid, em } = validate(
-          store.get("helper"),
-          clone,
-          ID,
-          newFiles
-        );
+        const { valid, em } = validate(helper, clone, ID, newFiles);
         ref.entry[ID].files = newFiles;
         ref.entry[ID].valid = valid;
         ref.entry[ID].errorMessage = em;
@@ -110,7 +109,8 @@ export const blobStringJob = (
   config: Config,
   fileConfig: InitFileConfig,
   index: number,
-  valid: boolean
+  valid: boolean,
+  helper: Helper
 ) => {
   store.set((ref) => {
     ref.entry[ID].files[index] = parseFile(
@@ -120,7 +120,8 @@ export const blobStringJob = (
       config,
       value,
       !!fileConfig.getBlob, // true is getBlob is present
-      {} as File
+      {} as File,
+      helper
     );
     ref.entry[ID].valid = valid;
   });
@@ -148,16 +149,37 @@ export const retrieveBlob = (
   ID: string,
   config: Config,
   fileConfig: InitFileConfig,
-  valid: boolean
+  valid: boolean,
+  helper: Helper
 ) => {
   if (value instanceof Array) {
     value.forEach((v, index) => {
-      blobStringJob(v, store, clone, ID, config, fileConfig, index, valid);
+      blobStringJob(
+        v,
+        store,
+        clone,
+        ID,
+        config,
+        fileConfig,
+        index,
+        valid,
+        helper
+      );
     });
     return;
   }
   if (typeof value === "string") {
-    blobStringJob(value, store, clone, ID, config, fileConfig, 0, valid);
+    blobStringJob(
+      value,
+      store,
+      clone,
+      ID,
+      config,
+      fileConfig,
+      0,
+      valid,
+      helper
+    );
     return;
   }
   throw Error(
