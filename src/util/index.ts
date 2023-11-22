@@ -29,10 +29,11 @@ const initValidAndTouch = (entry: Input) => {
 
 // Spread common props
 const commonProps = (entry: Input, id: string) => {
+  const defaultID = entry.id ?? id;
   return {
-    id: entry.id ?? id,
-    name: entry.name ?? entry.id ?? id,
-    label: entry.label ?? entry.name ?? entry.id ?? id,
+    id: defaultID,
+    name: entry.name ?? defaultID,
+    label: entry.label ?? entry.name ?? defaultID,
     type: entry.type ?? "text",
     value:
       entry.type === "select" && entry.multiple
@@ -43,7 +44,7 @@ const commonProps = (entry: Input, id: string) => {
     checked: false,
     valid: initValidAndTouch(entry),
     touched: initValidAndTouch(entry),
-    placeholder: "",
+    placeholder: entry.placeholder ?? entry.name ?? defaultID,
     errorMessage: undefined,
     validating: false
   };
