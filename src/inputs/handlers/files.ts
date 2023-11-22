@@ -4,14 +4,14 @@ import type {
   InitFileConfig,
   InputStore,
   ParsedFile,
-  RequiredObjInput
+  ObjectInput
 } from "../../types";
 import { validate } from "../../util/validation";
 import { validateState } from "../../util";
 
 export const createFiles = (
   files: FileList | null,
-  clone: RequiredObjInput,
+  clone: ObjectInput,
   ID: string,
   store: InputStore,
   config: Config,
@@ -44,7 +44,7 @@ export const createFiles = (
 };
 
 export const parseFile = (
-  clone: RequiredObjInput,
+  clone: ObjectInput,
   ID: string,
   store: InputStore,
   config: Config,
@@ -104,7 +104,7 @@ export const parseFile = (
 export const blobStringJob = (
   value: any,
   store: InputStore,
-  clone: RequiredObjInput,
+  clone: ObjectInput,
   ID: string,
   config: Config,
   fileConfig: InitFileConfig,
@@ -145,7 +145,7 @@ export const blobStringJob = (
 export const retrieveBlob = (
   value: any,
   store: InputStore,
-  clone: RequiredObjInput,
+  clone: ObjectInput,
   ID: string,
   config: Config,
   fileConfig: InitFileConfig,

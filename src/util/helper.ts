@@ -1,4 +1,4 @@
-import type { ComputeOnceOut, Helper, ObjInput } from "../types";
+import type { ComputeOnceOut, Helper, CreateObjectInput } from "../types";
 
 const He = (): Helper => {
   // omitted keys
@@ -12,7 +12,7 @@ const He = (): Helper => {
   // async delay
   const a = {};
 
-  const clean = (s: ObjInput) => {
+  const clean = (s: CreateObjectInput) => {
     for (const sKey in s) {
       delete s[sKey].validation?.copy;
       delete s[sKey].validation?.match;

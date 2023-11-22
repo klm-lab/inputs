@@ -5,9 +5,9 @@ import type {
   ErrorMessageType,
   InputStore,
   MatchResultType,
-  ObjInput,
-  RequiredInput,
-  RequiredObjInput,
+  CreateObjectInput,
+  Input,
+  ObjectInput,
   ValidationStateType,
   Unknown,
   Helper
@@ -45,7 +45,7 @@ const parseCopy = (
 // Deep match
 const deepMatch = (
   helper: Helper,
-  state: ObjInput,
+  state: CreateObjectInput,
   stateKey: string,
   matchKey: string,
   keyPath: keyof ValidationStateType
@@ -121,11 +121,11 @@ const getValue = (rule: any) => {
 // V is validate
 const validate = (
   helper: Helper,
-  state: RequiredObjInput,
+  state: ObjectInput,
   target: string,
   value: Unknown
 ) => {
-  const entry: RequiredInput = state[target];
+  const entry: Input = state[target];
   const rules: ValidationStateType = entry.validation || {};
   let valid: boolean = true;
   const em: ErrorMessageType | undefined = helper.em[target];
@@ -342,12 +342,12 @@ const validate = (
 const asyncValidation = (
   store: InputStore,
   helper: Helper,
-  state: RequiredObjInput,
+  state: ObjectInput,
   target: string,
   value: unknown,
   callback: AsyncCallback
 ) => {
-  const entry: RequiredInput = state[target];
+  const entry: Input = state[target];
   clearTimeout(helper.a[entry.key]);
   helper.a[entry.key] = setTimeout(() => {
     // Save the time
