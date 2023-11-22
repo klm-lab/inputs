@@ -3,8 +3,8 @@ import type {
   Helper,
   InputStore,
   ParsedFile,
-  RequiredInput,
-  RequiredObjInput
+  Input,
+  ObjectInput
 } from "../../types";
 import { AsyncValidationParams } from "../../types";
 import { asyncValidation, validate } from "../../util/validation";
@@ -45,7 +45,7 @@ const asyncCallback = ({
 };
 
 const onChange = (
-  input: RequiredInput,
+  input: Input,
   element: HTMLInputElement | HTMLSelectElement,
   store: InputStore,
   config: Config,
@@ -83,15 +83,17 @@ const onChange = (
     for (const key in clone) {
       if (clone[key].type === "radio" && clone[key].name === clone[ID].name) {
         clone[key].checked = clone[key].value === value;
+        clone[key].domProps.checked = clone[key].value === value;
         clone[key].valid = true;
       }
     }
   } else if (input.type === "checkbox") {
     // Toggle the checkbox input
     clone[ID].checked = !clone[ID].checked;
+    clone[ID].domProps.checked = !clone[ID].domProps.checked;
   } else {
-    // Parse value if valid and if number
     clone[ID].value = value;
+    clone[ID].domProps.value = value;
   }
   // Touched input
   clone[ID].touched = true;
@@ -118,7 +120,7 @@ const onChange = (
   syncChanges(store, clone);
 };
 
-const syncChanges = (store: InputStore, data: RequiredObjInput) => {
+const syncChanges = (store: InputStore, data: ObjectInput) => {
   store.set((ref) => {
     ref.entry = data;
     ref.isValid = validateState(data);
@@ -128,7 +130,7 @@ const syncChanges = (store: InputStore, data: RequiredObjInput) => {
 export const inputChange = (
   value: any,
   key: string,
-  entry: RequiredObjInput,
+  entry: ObjectInput,
   store: InputStore,
   config: Config,
   helper: Helper

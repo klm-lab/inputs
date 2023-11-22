@@ -2,24 +2,26 @@ import type {
   ArrayStateOutput,
   ComputeOnceOut,
   Config,
+  CreateArrayInput,
+  CreateObjectInput,
   ForEachCallback,
   Helper,
   InitFileConfig,
   Input,
   InputStore,
+  InternalInput,
   IsValid,
   MapCallback,
   Method,
-  ObjInput,
+  ObjectInput,
   ObjStateOutput,
-  RequiredInput,
-  RequiredObjInput,
   StateType,
   StringStateOutput
 } from "../types";
 import {
   commonProps,
   extractValues,
+  lockProps,
   matchRules,
   parseValue,
   touchInput,
@@ -34,7 +36,7 @@ import { inputChange } from "./handlers/changes";
 import { validate } from "../util/validation";
 
 const init = (
-  input: RequiredInput,
+  input: Input,
   value: unknown,
   store: InputStore,
   config: Config,
@@ -57,12 +59,16 @@ const init = (
   if (input.type === "radio") {
     // Check right radio input
     clone[ID].checked = clone[ID].value === value;
+    clone[ID].domProps.checked = clone[ID].value === value;
   } else if (input.type === "checkbox") {
     // Toggle the checkbox input
-    clone[ID].checked = (value as unknown[]).includes(clone[ID].value);
+    const cbV = (value as unknown[]).includes(clone[ID].value);
+    clone[ID].checked = cbV;
+    clone[ID].domProps.checked = cbV;
   } else {
     // Parse value if number
     clone[ID].value = parseValue(input, value);
+    clone[ID].domProps.value = parseValue(input, value);
   }
   // Sync handlers
   store.set((ref) => {
@@ -72,20 +78,21 @@ const init = (
 };
 
 const populate = (state: any, type: StateType, config: Config) => {
-  const final = {} as ObjInput;
+  const final = {} as CreateObjectInput;
   const helper = He();
   for (const stateKey in state) {
     const parseKey = type === "object" ? stateKey : state[stateKey].id;
     const key = crypto.randomUUID();
-    const v = {
+    const v: Input = {
       ...commonProps(state[stateKey], stateKey),
       ...state[stateKey],
       ...(type === "object" ? { id: stateKey, key } : { key })
     };
+    v.domProps = lockProps(v);
     final[parseKey] = v;
     helper.s[parseKey] = { ...v };
   }
-  const entry = helper.clean(matchRules(final, helper)) as RequiredObjInput;
+  const entry = helper.clean(matchRules(final, helper)) as ObjectInput;
   const isValid = validateState(entry);
   return {
     entry,
@@ -113,6 +120,8 @@ const computeOnce = (
     const entry = ref.entry;
     for (const key in entry) {
       ref.entry[key].onChange = (value) =>
+        inputChange(value, key, entry, store, config, helper);
+      ref.entry[key].domProps.onChange = (value) =>
         inputChange(value, key, entry, store, config, helper);
       ref.entry[key].init = (value, fileConfig: InitFileConfig = {}) =>
         init(entry[key], value, store, config, fileConfig, helper);
@@ -155,13 +164,13 @@ const computeOnce = (
 
   const map = (callback: MapCallback) => loop(callback, "map") as unknown[];
 
-  const toArray = (): RequiredInput[] & IsValid => {
-    const r = transformToArray(store.get("entry")) as RequiredInput[] & IsValid;
+  const toArray = (): Input[] & IsValid => {
+    const r = transformToArray(store.get("entry")) as Input[] & IsValid;
     r.isValid = store.get("isValid");
     return r;
   };
-  const toObject = (): RequiredObjInput & IsValid => {
-    const r = store.get("entry") as RequiredObjInput & IsValid;
+  const toObject = (): ObjectInput & IsValid => {
+    const r = store.get("entry") as ObjectInput & IsValid;
     r.isValid = store.get("isValid");
     return r;
   };
@@ -226,18 +235,21 @@ const parsedInputs = (
   const form = useMemo(() => rest, []);
 
   const parsedInputs =
-    type === "object" ? inputs : transformToArray(inputs as RequiredObjInput);
+    type === "object" ? inputs : transformToArray(inputs as ObjectInput);
   (parsedInputs as typeof parsedInputs & IsValid).isValid = isValid;
   return [parsedInputs, form];
 };
 
 function useInputs<S>(
-  initialState: ObjInput | S,
+  initialState: CreateObjectInput | S,
   config?: Config
 ): ObjStateOutput<keyof S>;
-function useInputs(initialState: Input[], config?: Config): ArrayStateOutput;
 function useInputs(
-  initialState: (string | Input)[],
+  initialState: CreateArrayInput,
+  config?: Config
+): ArrayStateOutput;
+function useInputs(
+  initialState: (string | InternalInput)[],
   config?: Config
 ): ArrayStateOutput;
 function useInputs(initialState: string, config?: Config): StringStateOutput;

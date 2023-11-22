@@ -114,22 +114,22 @@ interface RequiredValidationStateType {
   custom: CustomValidationType;
 }
 
-type StringOrObj = string | { [k in string]: string };
+// type StringOrObj = string | { [k in string]: string };
 type ErrorMessageType = Unknown;
 
-interface Input {
+interface InternalInput {
   id?: string;
   name?: string;
   type?: HTMLInputTypeAttribute;
-  label?: StringOrObj;
+  label?: Unknown;
   value?: Unknown;
   checked?: boolean;
   multiple?: boolean;
   mergeChanges?: boolean;
   valid?: boolean;
   touched?: boolean;
-  placeholder?: StringOrObj;
-  errorMessage?: ErrorMessageType;
+  placeholder?: Unknown;
+  errorMessage?: Unknown;
   validation?: ValidationStateType;
 }
 
@@ -148,30 +148,34 @@ interface ParsedFile {
 }
 
 // FOr some reason, Build-in Required doesn't work
-interface RequiredInput {
+interface DomProps {
   id: string;
   name: string;
   type: HTMLInputTypeAttribute;
-  label: Unknown;
+  "aria-label": Unknown;
   value: Unknown;
-  files: ParsedFile[];
   checked: boolean;
   multiple: boolean;
-  mergeChanges: boolean;
-  valid: boolean;
-  touched: boolean;
   placeholder: Unknown;
-  errorMessage: ErrorMessageType;
-  key: string;
-  validation: RequiredValidationStateType;
-  validating: boolean;
-  asyncValidationFailed: boolean;
 
   onChange(event: SyntheticEvent<HTMLElement>): void;
 
   onChange(value: Unknown): void;
+}
+interface Input extends DomProps {
+  key: string;
+  label: Unknown;
+  files: ParsedFile[];
+  mergeChanges: boolean;
+  errorMessage: ErrorMessageType;
+  validation: RequiredValidationStateType;
+  validating: boolean;
+  asyncValidationFailed: boolean;
+  valid: boolean;
+  touched: boolean;
 
   init(value: Unknown, initFileConfig?: InitFileConfig): void;
+  domProps: DomProps;
 }
 
 interface InitFileConfig {
@@ -181,20 +185,20 @@ interface InitFileConfig {
   getBlob?(url: string): File;
 }
 
-type ObjInput = {
+type CreateObjectInput = {
+  [key in string]: InternalInput;
+};
+
+type ObjectInput = {
   [key in string]: Input;
 };
 
-type RequiredObjInput = {
-  [key in string]: RequiredInput;
-};
+type ArrayInput = Input[];
+type CreateArrayInput = InternalInput[];
 
-type ObjStateOutput<Key> = [
-  { [k in Key & string]: RequiredInput } & IsValid,
-  Form
-];
-type StringStateOutput = [RequiredInput & IsValid, Form];
-type ArrayStateOutput = [RequiredInput[] & IsValid, Form];
+type ObjStateOutput<Key> = [{ [k in Key & string]: Input } & IsValid, Form];
+type StringStateOutput = [Input & IsValid, Form];
+type ArrayStateOutput = [ArrayInput & IsValid, Form];
 
 type StateType = "object" | "array";
 
@@ -210,9 +214,9 @@ interface IsValid {
 }
 
 interface CommonForm {
-  toObject(): RequiredObjInput & IsValid;
+  toObject(): ObjectInput & IsValid;
 
-  toArray(): RequiredInput[] & IsValid;
+  toArray(): ArrayInput & IsValid;
 
   reset(): void;
 
@@ -224,16 +228,18 @@ interface CommonForm {
 type Method = "forEach" | "map";
 
 interface ForEachCallback {
-  (input: RequiredInput, index: number, array: RequiredInput[]): void;
+  (input: Input, index: number, array: ArrayInput): void;
 }
 
 interface MapCallback {
-  (input: RequiredInput, index: number, array: RequiredInput[]): unknown;
+  (input: Input, index: number, array: ArrayInput): unknown;
 }
 
 interface Form extends CommonForm {
   length: number;
+
   getValues(name?: string): Unknown;
+
   onSubmit(event: SyntheticEvent): void;
 }
 
@@ -261,7 +267,7 @@ interface TrackUtil extends CommonForm {
 }
 
 type InputStore = StoreType<{
-  entry: RequiredObjInput;
+  entry: ObjectInput;
   isValid: boolean;
   helper: Helper;
   initialValid: boolean;
@@ -270,7 +276,7 @@ type InputStore = StoreType<{
 type AsyncValidationParams = {
   valid: boolean;
   em?: ErrorMessageType;
-  entry: RequiredInput;
+  entry: Input;
   store: InputStore;
   failed?: boolean;
   helper: Helper;
@@ -280,17 +286,20 @@ type AsyncCallback = (params: AsyncValidationParams) => void;
 interface ComputeOnceOut extends CommonForm {
   store: InputStore;
   length: number;
+
   getValues(name?: string): Unknown;
+
   onSubmit(event: SyntheticEvent): void;
 }
 
 interface Helper {
   ok: { [k in string]: Set<keyof ValidationStateType> };
-  s: ObjInput;
+  s: CreateObjectInput;
   em: { [k in string]: ErrorMessageType | undefined };
   tm: { [k in string]: string[] };
   a: { [k in string]: Unknown };
-  clean(s: ObjInput): ObjInput;
+
+  clean(s: CreateObjectInput): CreateObjectInput;
 }
 
 export type {
@@ -299,7 +308,7 @@ export type {
   ObjStateOutput,
   ArrayStateOutput,
   StringStateOutput,
-  Input,
+  InternalInput,
   Unknown,
   ValidationStateType,
   StateType,
@@ -312,12 +321,12 @@ export type {
   MergeType,
   CopyType,
   Config,
-  RequiredInput,
+  Input,
   IDTrackUtil,
   InputStore,
   AsyncCallback,
   AsyncValidationParams,
-  RequiredObjInput,
+  ObjectInput,
   ComputeOnceOut,
   ParsedFile,
   InitFileConfig,
@@ -325,5 +334,8 @@ export type {
   MapCallback,
   Method,
   IsValid,
-  ObjInput
+  CreateObjectInput,
+  ArrayInput,
+  CreateArrayInput,
+  DomProps
 };

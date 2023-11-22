@@ -1,25 +1,26 @@
 import type {
+  CreateObjectInput,
+  DomProps,
   Helper,
   Input,
   InputStore,
+  InternalInput,
   MatchResultType,
   MergeType,
-  ObjInput,
+  ObjectInput,
   ParsedFile,
-  RequiredInput,
-  RequiredObjInput,
   ValidationStateType
 } from "../types";
 import { deepMatch, parseCopy, validate } from "./validation";
 
-const parseValue = (input: RequiredInput, value: any) =>
+const parseValue = (input: Input, value: any) =>
   input.type === "number" || input.validation?.number
     ? !isNaN(Number(value))
       ? Number(value)
       : value
     : value;
 
-const initValidAndTouch = (entry: Input) => {
+const initValidAndTouch = (entry: InternalInput) => {
   const validation = entry.validation || {};
   const isValid = !Object.keys(validation).length;
   // return !["", 0, null, undefined].includes(entry.value);
@@ -27,8 +28,21 @@ const initValidAndTouch = (entry: Input) => {
   return isValid ?? false;
 };
 
+const lockProps = (entry: Input) => {
+  return {
+    id: entry.id,
+    name: entry.name,
+    type: entry.type,
+    "aria-label": entry.label,
+    value: entry.value,
+    checked: entry.checked,
+    multiple: entry.multiple,
+    placeholder: entry.placeholder
+  } as DomProps;
+};
+
 // Spread common props
-const commonProps = (entry: Input, id: string) => {
+const commonProps = (entry: InternalInput, id: string) => {
   const defaultID = entry.id ?? id;
   return {
     id: defaultID,
@@ -38,8 +52,8 @@ const commonProps = (entry: Input, id: string) => {
     value:
       entry.type === "select" && entry.multiple
         ? []
-        : entry.type === "radio"
-        ? "value-" + id
+        : ["radio", "checkbox"].includes(entry.type as string)
+        ? entry.label ?? defaultID
         : "",
     checked: false,
     valid: initValidAndTouch(entry),
@@ -130,7 +144,7 @@ const merge = (
 // Match and copy input validation
 const mcv = (
   helper: Helper,
-  state: ObjInput,
+  state: CreateObjectInput,
   stateKey: string,
   matchOrCopyKey: string,
   keyPath: keyof ValidationStateType
@@ -222,7 +236,7 @@ const mcv = (
   return state;
 };
 
-const patchedCbR = (state: ObjInput) => {
+const patchedCbR = (state: CreateObjectInput) => {
   const checkboxId: string[] = [];
   const radioId: string[] = [];
   const cbInput = {} as { [k in string]: any };
@@ -290,7 +304,7 @@ const patchedCbR = (state: ObjInput) => {
  * }.
  *
  */
-const matchRules = (state: ObjInput, helper: Helper) => {
+const matchRules = (state: CreateObjectInput, helper: Helper) => {
   state = patchedCbR(state);
   for (const stateKey in state) {
     // we save the error message
@@ -343,10 +357,10 @@ const touchInput = (store: InputStore, helper: Helper) => {
           : input.value;
     }
 
-    const { em } = validate(helper, data, formKey, value);
+    const { em, valid: newValid } = validate(helper, data, formKey, value);
     data[formKey].touched = true;
     data[formKey].errorMessage = em;
-    isValid = isValid && !data[formKey].validating;
+    isValid = isValid && !data[formKey].validating && newValid;
   }
   store.set((ref) => {
     ref.entry = data;
@@ -356,7 +370,7 @@ const touchInput = (store: InputStore, helper: Helper) => {
 
 // Validate the state
 // Set form is valid
-const validateState = (data: RequiredObjInput) => {
+const validateState = (data: ObjectInput) => {
   let valid = true;
   for (const formKey in data) {
     valid = valid && !data[formKey].validating && data[formKey].valid;
@@ -367,8 +381,8 @@ const validateState = (data: RequiredObjInput) => {
   return valid;
 };
 // T transform array to object and vice versa
-const transformToArray = (state: RequiredObjInput) => {
-  const result: RequiredInput[] = [];
+const transformToArray = (state: ObjectInput) => {
+  const result: Input[] = [];
   for (const key in state) {
     result.push(state[key]);
   }
@@ -386,7 +400,7 @@ const cleanFiles = (files: ParsedFile[]) => {
 };
 
 // E extract values from state
-const extractValues = (state: RequiredObjInput) => {
+const extractValues = (state: ObjectInput) => {
   const result = {} as { [k in string]: any };
   for (const key in state) {
     const K = state[key].name;
@@ -420,5 +434,6 @@ export {
   transformToArray,
   extractValues,
   parseValue,
-  touchInput
+  touchInput,
+  lockProps
 };

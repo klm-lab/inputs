@@ -1,6 +1,6 @@
-import type { RequiredObjInput } from "../../types";
+import type { ObjectInput } from "../../types";
 
-export const createCheckboxValue = (clone: RequiredObjInput, ID: string) => {
+export const createCheckboxValue = (clone: ObjectInput, ID: string) => {
   const selected = [] as string[];
   !clone[ID].checked && selected.push(clone[ID].value);
   for (const key in clone) {

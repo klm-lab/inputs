@@ -1,9 +1,9 @@
-import type { RequiredObjInput } from "../../types";
+import type { ObjectInput } from "../../types";
 
 export const createSelectFiles = (
   isEvent: boolean,
   element: HTMLSelectElement,
-  clone: RequiredObjInput,
+  clone: ObjectInput,
   ID: string
 ) => {
   let selected = [] as string[];
