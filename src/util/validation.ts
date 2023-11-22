@@ -9,7 +9,7 @@ import type {
   RequiredInput,
   RequiredObjInput,
   ValidationStateType,
-  ValuesType,
+  Unknown,
   Helper
 } from "../types";
 
@@ -123,7 +123,7 @@ const validate = (
   helper: Helper,
   state: RequiredObjInput,
   target: string,
-  value: ValuesType
+  value: Unknown
 ) => {
   const entry: RequiredInput = state[target];
   const rules: ValidationStateType = entry.validation || {};

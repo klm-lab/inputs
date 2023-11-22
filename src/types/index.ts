@@ -25,18 +25,18 @@ type HTMLInputTypeAttribute =
   | "url"
   | "week";
 
-type ValuesType = any | any[];
+type Unknown = any;
 
 interface CustomValidationType {
   (
-    value: ValuesType,
+    value: Unknown,
     setErrorMessage?: (message: ErrorMessageType) => void
   ): boolean;
 }
 
 interface CustomAsyncValidationType {
   (
-    value: ValuesType,
+    value: Unknown,
     setErrorMessage?: (message: ErrorMessageType) => void
   ): Promise<boolean>;
 }
@@ -86,7 +86,7 @@ interface ValidationStateType {
   match?: string;
   startsWith?: StringOrMap;
   endsWith?: StringOrMap;
-  regex?: RegExp & any;
+  regex?: RegExp & Unknown;
   copy?: string | CopyType;
   custom?: CustomValidationType;
   asyncCustom?: CustomAsyncValidationType;
@@ -108,21 +108,21 @@ interface RequiredValidationStateType {
   match: string;
   startsWith: StringOrMap;
   endsWith: StringOrMap;
-  regex: RegExp & any;
+  regex: RegExp & Unknown;
   copy: string | CopyType;
   asyncCustom: CustomAsyncValidationType;
   custom: CustomValidationType;
 }
 
 type StringOrObj = string | { [k in string]: string };
-type ErrorMessageType = StringOrObj;
+type ErrorMessageType = Unknown;
 
 interface Input {
   id?: string;
   name?: string;
   type?: HTMLInputTypeAttribute;
   label?: StringOrObj;
-  value?: ValuesType;
+  value?: Unknown;
   checked?: boolean;
   multiple?: boolean;
   mergeChanges?: boolean;
@@ -138,13 +138,13 @@ interface ParsedFile {
   key: string;
   url: string;
   gettingFile: boolean;
-  fileUpdate: any;
+  fileUpdate: Unknown;
 
   selfRemove(): void;
 
   onLoad(): void;
 
-  selfUpdate(data: any): void;
+  selfUpdate(data: Unknown): void;
 }
 
 // FOr some reason, Build-in Required doesn't work
@@ -152,15 +152,15 @@ interface RequiredInput {
   id: string;
   name: string;
   type: HTMLInputTypeAttribute;
-  label: StringOrObj;
-  value: ValuesType;
+  label: Unknown;
+  value: Unknown;
   files: ParsedFile[];
   checked: boolean;
   multiple: boolean;
   mergeChanges: boolean;
   valid: boolean;
   touched: boolean;
-  placeholder: StringOrObj;
+  placeholder: Unknown;
   errorMessage: ErrorMessageType;
   key: string;
   validation: RequiredValidationStateType;
@@ -169,9 +169,9 @@ interface RequiredInput {
 
   onChange(event: SyntheticEvent<HTMLElement>): void;
 
-  onChange(value: any): void;
+  onChange(value: Unknown): void;
 
-  init(value: any, initFileConfig?: InitFileConfig): void;
+  init(value: Unknown, initFileConfig?: InitFileConfig): void;
 }
 
 interface InitFileConfig {
@@ -233,7 +233,7 @@ interface MapCallback {
 
 interface Form extends CommonForm {
   length: number;
-  getValues(name?: string): any;
+  getValues(name?: string): Unknown;
   onSubmit(event: SyntheticEvent): void;
 }
 
@@ -243,21 +243,21 @@ interface IDTrackUtil<S> extends CommonForm {
 
   isValid(): boolean;
 
-  getValues(name?: string): any;
+  getValues(name?: string): Unknown;
 
   // Todo, typing result
-  // useInputs(): any;
-  useValues(name?: string): any;
+  // useInputs(): Unknown;
+  useValues(name?: string): Unknown;
 }
 
 interface TrackUtil extends CommonForm {
   isValid(): boolean;
 
-  getValues(): any;
+  getValues(): Unknown;
 
   length(): number;
 
-  useValues(): any;
+  useValues(): Unknown;
 }
 
 type InputStore = StoreType<{
@@ -280,7 +280,7 @@ type AsyncCallback = (params: AsyncValidationParams) => void;
 interface ComputeOnceOut extends CommonForm {
   store: InputStore;
   length: number;
-  getValues(name?: string): any;
+  getValues(name?: string): Unknown;
   onSubmit(event: SyntheticEvent): void;
 }
 
@@ -289,7 +289,7 @@ interface Helper {
   s: ObjInput;
   em: { [k in string]: ErrorMessageType | undefined };
   tm: { [k in string]: string[] };
-  a: { [k in string]: any };
+  a: { [k in string]: Unknown };
   clean(s: ObjInput): ObjInput;
 }
 
@@ -300,7 +300,7 @@ export type {
   ArrayStateOutput,
   StringStateOutput,
   Input,
-  ValuesType,
+  Unknown,
   ValidationStateType,
   StateType,
   CustomValidationType,
