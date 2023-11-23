@@ -1,5 +1,5 @@
 import type {
-  Config,
+  InputConfig,
   Helper,
   InputStore,
   ParsedFile,
@@ -48,7 +48,7 @@ const onChange = (
   input: Input,
   element: HTMLInputElement | HTMLSelectElement,
   store: InputStore,
-  config: Config,
+  config: InputConfig,
   isEvent: boolean,
   helper: Helper
 ) => {
@@ -132,7 +132,7 @@ export const inputChange = (
   key: string,
   entry: ObjectInput,
   store: InputStore,
-  config: Config,
+  config: InputConfig,
   helper: Helper
 ) => {
   const isEvent =

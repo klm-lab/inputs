@@ -1,8 +1,8 @@
 import type {
   CreateObjectInput,
-  InputProps,
   Helper,
   Input,
+  InputProps,
   InputStore,
   InternalInput,
   MatchResultType,
@@ -342,7 +342,6 @@ const touchInput = (store: InputStore, helper: Helper) => {
   const { isValid, invalidKey } = validateState(data);
   if (invalidKey) {
     const input = data[invalidKey];
-
     const value =
       input.type === "file"
         ? input.files
@@ -358,8 +357,6 @@ const touchInput = (store: InputStore, helper: Helper) => {
       invalidKey,
       input.type === "radio" ? (radioValid ? value : null) : value
     );
-    data[invalidKey].touched = true;
-    data[invalidKey].errorMessage = em;
 
     store.set((ref) => {
       ref.entry[invalidKey].touched = true;

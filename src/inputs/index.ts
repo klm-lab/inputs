@@ -1,7 +1,7 @@
 import type {
   ArrayStateOutput,
   ComputeOnceOut,
-  Config,
+  InputConfig,
   CreateArrayInput,
   CreateObjectInput,
   ForEachCallback,
@@ -39,7 +39,7 @@ const init = (
   input: Input,
   value: unknown,
   store: InputStore,
-  config: Config,
+  config: InputConfig,
   fileConfig: InitFileConfig,
   helper: Helper
 ) => {
@@ -77,7 +77,7 @@ const init = (
   });
 };
 
-const populate = (state: any, type: StateType, config: Config) => {
+const populate = (state: any, type: StateType, config: InputConfig) => {
   const final = {} as CreateObjectInput;
   const helper = He();
   for (const stateKey in state) {
@@ -106,7 +106,7 @@ const populate = (state: any, type: StateType, config: Config) => {
 const computeOnce = (
   initialState: unknown,
   type: StateType,
-  config: Config
+  config: InputConfig
 ) => {
   if (config.persistID && persist[config.persistID]) {
     return persist[config.persistID];
@@ -132,17 +132,23 @@ const computeOnce = (
   const initialForm = store.get("entry");
 
   const getValues = (name?: string) => {
-    if (config.lockValuesOnError && !touchInput(store, helper)) {
+    if (
+      config.lockValuesOnError &&
+      !validateState(store.get("entry")).isValid
+    ) {
       return null;
     }
     const values = extractValues(store.get("entry"));
     return name ? values[name] : values;
   };
 
+  const showError = () => {
+    touchInput(store, helper);
+  };
   const onSubmit = (event: SyntheticEvent) => {
     event.preventDefault();
     event.stopPropagation();
-    touchInput(store, helper);
+    showError();
   };
 
   const loop = (callback: ForEachCallback | MapCallback, method: Method) => {
@@ -192,7 +198,8 @@ const computeOnce = (
     forEach,
     map,
     length,
-    onSubmit
+    onSubmit,
+    showError
   };
 
   if (config.trackID && config.trackID.ID) {
@@ -220,7 +227,7 @@ const computeOnce = (
 const parsedInputs = (
   initialState: unknown,
   type: StateType,
-  config: Config,
+  config: InputConfig,
   selective?: string
 ) => {
   const { store, ...rest } = useMemo(
@@ -242,19 +249,22 @@ const parsedInputs = (
 
 function useInputs<S>(
   initialState: CreateObjectInput | S,
-  config?: Config
+  config?: InputConfig
 ): ObjStateOutput<keyof S>;
 function useInputs(
   initialState: CreateArrayInput,
-  config?: Config
+  config?: InputConfig
 ): ArrayStateOutput;
 function useInputs(
   initialState: (string | InternalInput)[],
-  config?: Config
+  config?: InputConfig
 ): ArrayStateOutput;
-function useInputs(initialState: string, config?: Config): StringStateOutput;
+function useInputs(
+  initialState: string,
+  config?: InputConfig
+): StringStateOutput;
 
-function useInputs(initialState: unknown, config: Config = {}): unknown {
+function useInputs(initialState: unknown, config: InputConfig = {}): unknown {
   if (initialState instanceof Array) {
     return parsedInputs(
       initialState.map((entry, i) =>

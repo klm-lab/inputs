@@ -207,7 +207,7 @@ type ArrayStateOutput = [ArrayInput & IsValid, Form];
 
 type StateType = "object" | "array";
 
-type Config = {
+type InputConfig = {
   asyncDelay?: number;
   persistID?: string;
   trackID?: IDTrackUtil<string>;
@@ -246,6 +246,7 @@ interface Form extends CommonForm {
   getValues(name?: string): Unknown;
 
   onSubmit(event: SyntheticEvent): void;
+  showError(): void;
 }
 
 interface IDTrackUtil<S> extends CommonForm {
@@ -295,6 +296,7 @@ interface ComputeOnceOut extends CommonForm {
   getValues(name?: string): Unknown;
 
   onSubmit(event: SyntheticEvent): void;
+  showError(): void;
 }
 
 interface Helper {
@@ -325,7 +327,7 @@ export type {
   CopyKeyObjType,
   MergeType,
   CopyType,
-  Config,
+  InputConfig,
   Input,
   IDTrackUtil,
   InputStore,

@@ -1,5 +1,5 @@
 import type {
-  Config,
+  InputConfig,
   Helper,
   InitFileConfig,
   InputStore,
@@ -14,7 +14,7 @@ export const createFiles = (
   clone: ObjectInput,
   ID: string,
   store: InputStore,
-  config: Config,
+  config: InputConfig,
   helper: Helper
 ) => {
   const entry = clone[ID];
@@ -47,7 +47,7 @@ export const parseFile = (
   clone: ObjectInput,
   ID: string,
   store: InputStore,
-  config: Config,
+  config: InputConfig,
   url: string,
   gettingFile: boolean,
   file: File,
@@ -106,7 +106,7 @@ export const blobStringJob = (
   store: InputStore,
   clone: ObjectInput,
   ID: string,
-  config: Config,
+  config: InputConfig,
   fileConfig: InitFileConfig,
   index: number,
   valid: boolean,
@@ -147,7 +147,7 @@ export const retrieveBlob = (
   store: InputStore,
   clone: ObjectInput,
   ID: string,
-  config: Config,
+  config: InputConfig,
   fileConfig: InitFileConfig,
   valid: boolean,
   helper: Helper
