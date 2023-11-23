@@ -59,16 +59,16 @@ const init = (
   if (input.type === "radio") {
     // Check right radio input
     clone[ID].checked = clone[ID].value === value;
-    clone[ID].domProps.checked = clone[ID].value === value;
+    clone[ID].props.checked = clone[ID].value === value;
   } else if (input.type === "checkbox") {
     // Toggle the checkbox input
     const cbV = (value as unknown[]).includes(clone[ID].value);
     clone[ID].checked = cbV;
-    clone[ID].domProps.checked = cbV;
+    clone[ID].props.checked = cbV;
   } else {
     // Parse value if number
     clone[ID].value = parseValue(input, value);
-    clone[ID].domProps.value = parseValue(input, value);
+    clone[ID].props.value = parseValue(input, value);
   }
   // Sync handlers
   store.set((ref) => {
@@ -88,12 +88,12 @@ const populate = (state: any, type: StateType, config: Config) => {
       ...state[stateKey],
       ...(type === "object" ? { id: stateKey, key } : { key })
     };
-    v.domProps = lockProps(v);
+    v.props = lockProps(v);
     final[parseKey] = v;
     helper.s[parseKey] = { ...v };
   }
   const entry = helper.clean(matchRules(final, helper)) as ObjectInput;
-  const isValid = validateState(entry);
+  const isValid = validateState(entry).isValid;
   return {
     entry,
     isValid,
@@ -121,7 +121,7 @@ const computeOnce = (
     for (const key in entry) {
       ref.entry[key].onChange = (value) =>
         inputChange(value, key, entry, store, config, helper);
-      ref.entry[key].domProps.onChange = (value) =>
+      ref.entry[key].props.onChange = (value) =>
         inputChange(value, key, entry, store, config, helper);
       ref.entry[key].init = (value, fileConfig: InitFileConfig = {}) =>
         init(entry[key], value, store, config, fileConfig, helper);

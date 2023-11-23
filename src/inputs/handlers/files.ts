@@ -81,7 +81,7 @@ export const parseFile = (
         ref.entry[ID].valid = valid;
         ref.entry[ID].errorMessage = em;
         // Validate form
-        ref.isValid = validateState(ref.entry);
+        ref.isValid = validateState(ref.entry).isValid;
       });
     }
   };

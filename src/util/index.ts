@@ -1,6 +1,6 @@
 import type {
   CreateObjectInput,
-  DomProps,
+  InputProps,
   Helper,
   Input,
   InputStore,
@@ -9,9 +9,13 @@ import type {
   MergeType,
   ObjectInput,
   ParsedFile,
+  Unknown,
+  ValidateState,
   ValidationStateType
 } from "../types";
 import { deepMatch, parseCopy, validate } from "./validation";
+import { createCheckboxValue } from "../inputs/handlers/checkbox";
+import { radioIsChecked } from "../inputs/handlers/radio";
 
 const parseValue = (input: Input, value: any) =>
   input.type === "number" || input.validation?.number
@@ -20,12 +24,12 @@ const parseValue = (input: Input, value: any) =>
       : value
     : value;
 
-const initValidAndTouch = (entry: InternalInput) => {
+const initValid = (entry: InternalInput) => {
   const validation = entry.validation || {};
   const isValid = !Object.keys(validation).length;
   // return !["", 0, null, undefined].includes(entry.value);
   // return isValid ? !!entry.checked : false;
-  return isValid ?? false;
+  return entry.checked ? true : isValid;
 };
 
 const lockProps = (entry: Input) => {
@@ -38,7 +42,7 @@ const lockProps = (entry: Input) => {
     checked: entry.checked,
     multiple: entry.multiple,
     placeholder: entry.placeholder
-  } as DomProps;
+  } as InputProps;
 };
 
 // Spread common props
@@ -56,8 +60,8 @@ const commonProps = (entry: InternalInput, id: string) => {
         ? entry.label ?? defaultID
         : "",
     checked: false,
-    valid: initValidAndTouch(entry),
-    touched: initValidAndTouch(entry),
+    valid: initValid(entry),
+    touched: false,
     placeholder: entry.placeholder ?? entry.name ?? defaultID,
     errorMessage: undefined,
     validating: false
@@ -236,59 +240,6 @@ const mcv = (
   return state;
 };
 
-const patchedCbR = (state: CreateObjectInput) => {
-  const checkboxId: string[] = [];
-  const radioId: string[] = [];
-  const cbInput = {} as { [k in string]: any };
-  const rdInput = {} as { [k in string]: any };
-
-  for (const stateKey in state) {
-    const name = state[stateKey].name as string;
-    cbInput[name] = cbInput[name] ?? {};
-    rdInput[name] = rdInput[name] ?? {};
-    const validation = state[stateKey].validation;
-    const errorMessage = state[stateKey].errorMessage;
-    const type = state[stateKey].type;
-    const checked = state[stateKey].checked;
-
-    // Patch checkbox and radio
-    if (type === "checkbox") {
-      checkboxId.push(stateKey);
-      if (validation) {
-        cbInput[name].validation = validation;
-        cbInput[name].errorMessage = errorMessage;
-        const df = cbInput[name].df;
-        if (checked && !df) {
-          cbInput[name].df = true;
-        }
-      }
-    }
-
-    if (type === "radio") {
-      radioId.push(stateKey);
-      const df = rdInput[name].df;
-      if (checked && !df) {
-        rdInput[name].df = true;
-      }
-    }
-  }
-
-  checkboxId.forEach((chId) => {
-    const name = state[chId].name as string;
-    state[chId].validation = state[chId].validation ?? cbInput[name].validation;
-    state[chId].errorMessage =
-      state[chId].errorMessage ?? cbInput[name].errorMessage;
-    state[chId].valid = cbInput[name].df ?? state[chId].valid;
-  });
-
-  radioId.forEach((rId) => {
-    const name = state[rId].name as string;
-    state[rId].valid = rdInput[name].df ?? state[rId].valid;
-  });
-
-  return state;
-};
-
 /**
  *  Mr is matching rules
  * We check suspicious validation key and match key which is a typical scenario for password and confirm Password
@@ -305,8 +256,32 @@ const patchedCbR = (state: CreateObjectInput) => {
  *
  */
 const matchRules = (state: CreateObjectInput, helper: Helper) => {
-  state = patchedCbR(state);
+  const patch = {
+    checkbox: {
+      tab: []
+    },
+    radio: {
+      tab: []
+    }
+  } as Unknown;
+
   for (const stateKey in state) {
+    const validation = state[stateKey].validation;
+    const errorMessage = state[stateKey].errorMessage;
+    const type = state[stateKey].type;
+
+    if (type === "checkbox" || type === "radio") {
+      patch[type].tab.push(stateKey);
+      if (!state[stateKey].valid && !patch[type].fv) {
+        patch[type][state[stateKey].name as string] = {
+          validation,
+          errorMessage
+        };
+        // found validation
+        patch[type].fv = true;
+      }
+    }
+
     // we save the error message
     helper.em[stateKey] = state[stateKey].errorMessage;
     // If an input want to copy validation from another input
@@ -337,48 +312,77 @@ const matchRules = (state: CreateObjectInput, helper: Helper) => {
     }
   }
 
+  Object.keys(patch).forEach((o) => {
+    if (patch[o].fv) {
+      patch[o].tab.forEach((id: string) => {
+        // we get the name
+        const name = state[id].name as string;
+        // define errorMessage
+        const errorMessage =
+          state[id].errorMessage ?? patch[o][name].errorMessage;
+        // we save the error message
+        helper.em[id] = errorMessage;
+        // define validation
+        state[id].validation = !state[id].valid
+          ? state[id].validation
+          : patch[o][name].validation;
+        // set errorMessage
+        state[id].errorMessage = errorMessage;
+        // set valid
+        state[id].valid = patch[o][name].validation ? false : state[id].valid;
+      });
+    }
+  });
+
   return state;
 };
 
-// Validate the state
-// Set form is valid
 const touchInput = (store: InputStore, helper: Helper) => {
-  let isValid = true;
   const data = store.get("entry");
-  for (const formKey in data) {
-    const input = data[formKey];
-    let value = input.value;
-    if (!input.touched) {
-      value =
-        input.type === "file" ||
-        (input.type === "select" && input.multiple) ||
-        input.type === "checkbox"
-          ? []
-          : input.value;
-    }
+  const { isValid, invalidKey } = validateState(data);
+  if (invalidKey) {
+    const input = data[invalidKey];
 
-    const { em, valid: newValid } = validate(helper, data, formKey, value);
-    data[formKey].touched = true;
-    data[formKey].errorMessage = em;
-    isValid = isValid && !data[formKey].validating && newValid;
+    const value =
+      input.type === "file"
+        ? input.files
+        : input.type === "checkbox"
+        ? createCheckboxValue(data, invalidKey, false)
+        : input.value;
+
+    const radioValid = radioIsChecked(data, invalidKey);
+
+    const { em } = validate(
+      helper,
+      data,
+      invalidKey,
+      input.type === "radio" ? (radioValid ? value : null) : value
+    );
+    data[invalidKey].touched = true;
+    data[invalidKey].errorMessage = em;
+
+    store.set((ref) => {
+      ref.entry[invalidKey].touched = true;
+      ref.entry[invalidKey].valid = false;
+      ref.entry[invalidKey].errorMessage = em;
+    });
   }
-  store.set((ref) => {
-    ref.entry = data;
-  });
   return isValid;
 };
 
 // Validate the state
 // Set form is valid
-const validateState = (data: ObjectInput) => {
-  let valid = true;
+const validateState = (data: ObjectInput): ValidateState => {
+  let isValid = true;
+  let invalidKey = null;
   for (const formKey in data) {
-    valid = valid && !data[formKey].validating && data[formKey].valid;
-    if (!valid) {
+    isValid = isValid && !data[formKey].validating && data[formKey].valid;
+    if (!isValid) {
+      invalidKey = formKey;
       break;
     }
   }
-  return valid;
+  return { isValid, invalidKey };
 };
 // T transform array to object and vice versa
 const transformToArray = (state: ObjectInput) => {
