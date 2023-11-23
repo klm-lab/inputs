@@ -147,8 +147,13 @@ interface ParsedFile {
   selfUpdate(data: Unknown): void;
 }
 
+type ValidateState = {
+  isValid: boolean;
+  invalidKey: string | null;
+};
+
 // FOr some reason, Build-in Required doesn't work
-interface DomProps {
+interface InputProps {
   id: string;
   name: string;
   type: HTMLInputTypeAttribute;
@@ -162,7 +167,7 @@ interface DomProps {
 
   onChange(value: Unknown): void;
 }
-interface Input extends DomProps {
+interface Input extends InputProps {
   key: string;
   label: Unknown;
   files: ParsedFile[];
@@ -175,7 +180,7 @@ interface Input extends DomProps {
   touched: boolean;
 
   init(value: Unknown, initFileConfig?: InitFileConfig): void;
-  domProps: DomProps;
+  props: InputProps;
 }
 
 interface InitFileConfig {
@@ -337,5 +342,6 @@ export type {
   CreateObjectInput,
   ArrayInput,
   CreateArrayInput,
-  DomProps
+  InputProps,
+  ValidateState
 };

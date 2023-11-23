@@ -83,17 +83,17 @@ const onChange = (
     for (const key in clone) {
       if (clone[key].type === "radio" && clone[key].name === clone[ID].name) {
         clone[key].checked = clone[key].value === value;
-        clone[key].domProps.checked = clone[key].value === value;
+        clone[key].props.checked = clone[key].value === value;
         clone[key].valid = true;
       }
     }
   } else if (input.type === "checkbox") {
     // Toggle the checkbox input
     clone[ID].checked = !clone[ID].checked;
-    clone[ID].domProps.checked = !clone[ID].domProps.checked;
+    clone[ID].props.checked = !clone[ID].props.checked;
   } else {
     clone[ID].value = value;
-    clone[ID].domProps.value = value;
+    clone[ID].props.value = value;
   }
   // Touched input
   clone[ID].touched = true;
@@ -123,7 +123,7 @@ const onChange = (
 const syncChanges = (store: InputStore, data: ObjectInput) => {
   store.set((ref) => {
     ref.entry = data;
-    ref.isValid = validateState(data);
+    ref.isValid = validateState(data).isValid;
   });
 };
 
