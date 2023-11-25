@@ -1,10 +1,10 @@
 import type {
-  Config,
   Helper,
-  InputStore,
-  ParsedFile,
   Input,
-  ObjectInput
+  InputConfig,
+  InputStore,
+  ObjectInputs,
+  ParsedFile
 } from "../../types";
 import { AsyncValidationParams } from "../../types";
 import { asyncValidation, validate } from "../../util/validation";
@@ -48,7 +48,7 @@ const onChange = (
   input: Input,
   element: HTMLInputElement | HTMLSelectElement,
   store: InputStore,
-  config: Config,
+  config: InputConfig,
   isEvent: boolean,
   helper: Helper
 ) => {
@@ -66,8 +66,12 @@ const onChange = (
           config,
           helper
         )
-      : input.type === "select" && input.multiple
-      ? createSelectFiles(isEvent, element as HTMLSelectElement, clone, ID)
+      : input.type === "select"
+      ? input.multiple
+        ? createSelectFiles(isEvent, element as HTMLSelectElement, clone, ID)
+        : element.value !== "" && element.value !== clone[ID].placeholder
+        ? element.value
+        : ""
       : element.value;
 
   const toValidate =
@@ -120,7 +124,7 @@ const onChange = (
   syncChanges(store, clone);
 };
 
-const syncChanges = (store: InputStore, data: ObjectInput) => {
+const syncChanges = (store: InputStore, data: ObjectInputs<string>) => {
   store.set((ref) => {
     ref.entry = data;
     ref.isValid = validateState(data).isValid;
@@ -130,9 +134,9 @@ const syncChanges = (store: InputStore, data: ObjectInput) => {
 export const inputChange = (
   value: any,
   key: string,
-  entry: ObjectInput,
+  entry: ObjectInputs<string>,
   store: InputStore,
-  config: Config,
+  config: InputConfig,
   helper: Helper
 ) => {
   const isEvent =

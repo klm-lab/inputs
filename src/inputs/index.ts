@@ -1,28 +1,29 @@
 import type {
   ArrayStateOutput,
   ComputeOnceOut,
-  Config,
-  CreateArrayInput,
-  CreateObjectInput,
+  CreateArrayInputs,
+  CreateObjectInputs,
   ForEachCallback,
   Helper,
   InitFileConfig,
   Input,
+  InputConfig,
   InputStore,
-  InternalInput,
   IsValid,
   MapCallback,
   Method,
-  ObjectInput,
+  ObjectInputs,
   ObjStateOutput,
   StateType,
-  StringStateOutput
+  StringStateOutput,
+  Unknown
 } from "../types";
 import {
   commonProps,
   extractValues,
   lockProps,
   matchRules,
+  O,
   parseValue,
   touchInput,
   transformToArray,
@@ -35,11 +36,11 @@ import { retrieveBlob } from "./handlers/files";
 import { inputChange } from "./handlers/changes";
 import { validate } from "../util/validation";
 
-const init = (
+const initValue = (
   input: Input,
-  value: unknown,
+  value: Unknown,
   store: InputStore,
-  config: Config,
+  config: InputConfig,
   fileConfig: InitFileConfig,
   helper: Helper
 ) => {
@@ -62,7 +63,7 @@ const init = (
     clone[ID].props.checked = clone[ID].value === value;
   } else if (input.type === "checkbox") {
     // Toggle the checkbox input
-    const cbV = (value as unknown[]).includes(clone[ID].value);
+    const cbV = (value as Unknown[]).includes(clone[ID].value);
     clone[ID].checked = cbV;
     clone[ID].props.checked = cbV;
   } else {
@@ -77,8 +78,8 @@ const init = (
   });
 };
 
-const populate = (state: any, type: StateType, config: Config) => {
-  const final = {} as CreateObjectInput;
+const populate = (state: any, type: StateType, config: InputConfig) => {
+  const final = {} as CreateObjectInputs<string>;
   const helper = He();
   for (const stateKey in state) {
     const parseKey = type === "object" ? stateKey : state[stateKey].id;
@@ -92,7 +93,7 @@ const populate = (state: any, type: StateType, config: Config) => {
     final[parseKey] = v;
     helper.s[parseKey] = { ...v };
   }
-  const entry = helper.clean(matchRules(final, helper)) as ObjectInput;
+  const entry = helper.clean(matchRules(final, helper)) as ObjectInputs<string>;
   const isValid = validateState(entry).isValid;
   return {
     entry,
@@ -104,9 +105,9 @@ const populate = (state: any, type: StateType, config: Config) => {
 };
 
 const computeOnce = (
-  initialState: unknown,
+  initialState: Unknown,
   type: StateType,
-  config: Config
+  config: InputConfig
 ) => {
   if (config.persistID && persist[config.persistID]) {
     return persist[config.persistID];
@@ -119,12 +120,22 @@ const computeOnce = (
   store.set((ref) => {
     const entry = ref.entry;
     for (const key in entry) {
+      // onChange
       ref.entry[key].onChange = (value) =>
         inputChange(value, key, entry, store, config, helper);
+      // Props onChange
       ref.entry[key].props.onChange = (value) =>
         inputChange(value, key, entry, store, config, helper);
-      ref.entry[key].init = (value, fileConfig: InitFileConfig = {}) =>
-        init(entry[key], value, store, config, fileConfig, helper);
+      // initValue
+      ref.entry[key].initValue = (value, fileConfig: InitFileConfig = {}) =>
+        initValue(entry[key], value, store, config, fileConfig, helper);
+      // setExtraData
+      ref.entry[key].setExtraData = (data) => {
+        store.set((ref) => {
+          ref.entry[key].extraData = data;
+        });
+      };
+      // files
       ref.entry[key].files = [];
     }
   });
@@ -132,17 +143,23 @@ const computeOnce = (
   const initialForm = store.get("entry");
 
   const getValues = (name?: string) => {
-    if (config.lockValuesOnError && !touchInput(store, helper)) {
+    if (
+      config.lockValuesOnError &&
+      !validateState(store.get("entry")).isValid
+    ) {
       return null;
     }
     const values = extractValues(store.get("entry"));
     return name ? values[name] : values;
   };
 
+  const showError = () => {
+    touchInput(store, helper);
+  };
   const onSubmit = (event: SyntheticEvent) => {
     event.preventDefault();
     event.stopPropagation();
-    touchInput(store, helper);
+    showError();
   };
 
   const loop = (callback: ForEachCallback | MapCallback, method: Method) => {
@@ -150,7 +167,7 @@ const computeOnce = (
     const v = {
       i: 0,
       ar: transformToArray(entry),
-      mapR: [] as unknown[]
+      mapR: [] as Unknown[]
     };
     for (const key in entry) {
       v.mapR.push(callback(entry[key], v.i, v.ar));
@@ -162,26 +179,47 @@ const computeOnce = (
   };
   const forEach = (callback: ForEachCallback) => loop(callback, "forEach");
 
-  const map = (callback: MapCallback) => loop(callback, "map") as unknown[];
+  const map = (callback: MapCallback) => loop(callback, "map") as Unknown[];
 
   const toArray = (): Input[] & IsValid => {
     const r = transformToArray(store.get("entry")) as Input[] & IsValid;
     r.isValid = store.get("isValid");
     return r;
   };
-  const toObject = (): ObjectInput & IsValid => {
-    const r = store.get("entry") as ObjectInput & IsValid;
+  const toObject = (): ObjectInputs<string> & IsValid => {
+    const r = store.get("entry") as ObjectInputs<string> & IsValid;
     r.isValid = store.get("isValid");
     return r;
   };
   const reset = () => {
     store.set((ref) => {
-      ref.entry = initialForm;
+      const entry = ref.entry;
+      const rForm: ObjectInputs<string> = {};
+      O.keys(initialForm).forEach((k) => {
+        rForm[k] = {
+          ...initialForm[k],
+          extraData: entry[k].extraData
+        };
+      });
+      ref.entry = rForm;
       ref.isValid = store.get("initialValid");
     });
   };
 
-  const length = Object.keys(initialForm).length;
+  const getInputById = (id: string) => {
+    return store.get(`entry.${id}`);
+  };
+
+  const getInputsByName = (name: string) => {
+    const entry = store.get("entry");
+    const r: Input[] = [];
+    O.keys(entry).forEach((k) => {
+      entry[k].name === name && r.push(entry[k]);
+    });
+    return r;
+  };
+
+  const length = O.keys(initialForm).length;
 
   const result: ComputeOnceOut = {
     reset,
@@ -192,11 +230,17 @@ const computeOnce = (
     forEach,
     map,
     length,
-    onSubmit
+    onSubmit,
+    showError,
+    getInputById,
+    getInputsByName
   };
 
   if (config.trackID && config.trackID.ID) {
     config.trackID.getValues = getValues;
+    config.trackID.showError = showError;
+    config.trackID.getInputById = getInputById;
+    config.trackID.getInputsByName = getInputsByName;
     config.trackID.toArray = toArray;
     config.trackID.toObject = toObject;
     config.trackID.forEach = forEach;
@@ -218,9 +262,9 @@ const computeOnce = (
 };
 
 const parsedInputs = (
-  initialState: unknown,
+  initialState: Unknown,
   type: StateType,
-  config: Config,
+  config: InputConfig,
   selective?: string
 ) => {
   const { store, ...rest } = useMemo(
@@ -235,26 +279,37 @@ const parsedInputs = (
   const form = useMemo(() => rest, []);
 
   const parsedInputs =
-    type === "object" ? inputs : transformToArray(inputs as ObjectInput);
+    type === "object"
+      ? inputs
+      : transformToArray(inputs as ObjectInputs<string>);
   (parsedInputs as typeof parsedInputs & IsValid).isValid = isValid;
   return [parsedInputs, form];
 };
 
-function useInputs<S>(
-  initialState: CreateObjectInput | S,
-  config?: Config
-): ObjStateOutput<keyof S>;
-function useInputs(
-  initialState: CreateArrayInput,
-  config?: Config
+// External declaration support (Dynamic infer)
+function useInputs<I>(
+  initialState: I extends Array<Unknown>
+    ? CreateArrayInputs | I
+    : CreateObjectInputs<keyof I> | I,
+  config?: InputConfig
+): I extends Array<Unknown> ? ArrayStateOutput : ObjStateOutput<I>;
+// Internal declaration object
+function useInputs<I extends CreateObjectInputs<keyof I>>(
+  initialState: CreateObjectInputs<keyof I> | I,
+  config?: InputConfig
+): ObjStateOutput<I>;
+// Internal declaration Array
+function useInputs<I extends CreateArrayInputs>(
+  initialState: CreateArrayInputs | I,
+  config?: InputConfig
 ): ArrayStateOutput;
+// string
 function useInputs(
-  initialState: (string | InternalInput)[],
-  config?: Config
-): ArrayStateOutput;
-function useInputs(initialState: string, config?: Config): StringStateOutput;
+  initialState: string,
+  config?: InputConfig
+): StringStateOutput;
 
-function useInputs(initialState: unknown, config: Config = {}): unknown {
+function useInputs(initialState: Unknown, config: InputConfig = {}): Unknown {
   if (initialState instanceof Array) {
     return parsedInputs(
       initialState.map((entry, i) =>

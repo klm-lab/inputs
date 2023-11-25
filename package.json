@@ -1,6 +1,6 @@
 {
   "name": "aio-inputs",
-  "version": "2.1.12",
+  "version": "2.1.13",
   "description": "An opinionated inputs state manager for react",
   "scripts": {
     "build": "npm ci && npm run build:noci",
@@ -79,7 +79,7 @@
     "state"
   ],
   "dependencies": {
-    "aio-store": "^2.4.3"
+    "aio-store": "^2.4.41"
   },
   "peerDependencies": {
     "react": "^18.2.0"

@@ -119,6 +119,7 @@ type ErrorMessageType = Unknown;
 
 interface InternalInput {
   id?: string;
+  accept?: string;
   name?: string;
   type?: HTMLInputTypeAttribute;
   label?: Unknown;
@@ -131,6 +132,7 @@ interface InternalInput {
   placeholder?: Unknown;
   errorMessage?: Unknown;
   validation?: ValidationStateType;
+  extraData?: Unknown;
 }
 
 interface ParsedFile {
@@ -155,9 +157,9 @@ type ValidateState = {
 // FOr some reason, Build-in Required doesn't work
 interface InputProps {
   id: string;
+  accept: string;
   name: string;
   type: HTMLInputTypeAttribute;
-  "aria-label": Unknown;
   value: Unknown;
   checked: boolean;
   multiple: boolean;
@@ -179,35 +181,37 @@ interface Input extends InputProps {
   valid: boolean;
   touched: boolean;
 
-  init(value: Unknown, initFileConfig?: InitFileConfig): void;
+  initValue(value: Unknown, initFileConfig?: InitFileConfig): void;
+  setExtraData(data: Unknown): void;
   props: InputProps;
+  extraData: Unknown;
 }
 
 interface InitFileConfig {
   // entryFormat?: "url" | "url[]";
   // proxyUrl?: string;
   // useDefaultProxyUrl?: boolean;
-  getBlob?(url: string): File;
+  getBlob?(url: string): Blob | Promise<Blob>;
 }
 
-type CreateObjectInput = {
-  [key in string]: InternalInput;
+type CreateObjectInputs<K> = {
+  [key in K & string]: InternalInput;
 };
 
-type ObjectInput = {
-  [key in string]: Input;
+type ObjectInputs<K> = {
+  [key in K & string]: Input;
 };
 
-type ArrayInput = Input[];
-type CreateArrayInput = InternalInput[];
+type ArrayInputs = Input[];
+type CreateArrayInputs = (string | InternalInput)[];
 
-type ObjStateOutput<Key> = [{ [k in Key & string]: Input } & IsValid, Form];
+type ObjStateOutput<I> = [{ [k in keyof I & string]: Input } & IsValid, Form];
 type StringStateOutput = [Input & IsValid, Form];
-type ArrayStateOutput = [ArrayInput & IsValid, Form];
+type ArrayStateOutput = [ArrayInputs & IsValid, Form];
 
 type StateType = "object" | "array";
 
-type Config = {
+type InputConfig = {
   asyncDelay?: number;
   persistID?: string;
   trackID?: IDTrackUtil<string>;
@@ -219,25 +223,30 @@ interface IsValid {
 }
 
 interface CommonForm {
-  toObject(): ObjectInput & IsValid;
+  toObject(): ObjectInputs<string> & IsValid;
 
-  toArray(): ArrayInput & IsValid;
+  toArray(): ArrayInputs & IsValid;
 
   reset(): void;
 
   forEach(callback: ForEachCallback): void;
 
-  map(callback: MapCallback): unknown[];
+  map(callback: MapCallback): Unknown[];
+
+  showError(): void;
+
+  getInputById(id: string): Input;
+  getInputsByName(name: string): Input[];
 }
 
 type Method = "forEach" | "map";
 
 interface ForEachCallback {
-  (input: Input, index: number, array: ArrayInput): void;
+  (input: Input, index: number, array: ArrayInputs): void;
 }
 
 interface MapCallback {
-  (input: Input, index: number, array: ArrayInput): unknown;
+  (input: Input, index: number, array: ArrayInputs): Unknown;
 }
 
 interface Form extends CommonForm {
@@ -248,8 +257,8 @@ interface Form extends CommonForm {
   onSubmit(event: SyntheticEvent): void;
 }
 
-interface IDTrackUtil<S> extends CommonForm {
-  ID: S;
+interface IDTrackUtil<I> extends CommonForm {
+  ID: I;
   length: number;
 
   isValid(): boolean;
@@ -272,7 +281,7 @@ interface TrackUtil extends CommonForm {
 }
 
 type InputStore = StoreType<{
-  entry: ObjectInput;
+  entry: ObjectInputs<string>;
   isValid: boolean;
   helper: Helper;
   initialValid: boolean;
@@ -295,16 +304,17 @@ interface ComputeOnceOut extends CommonForm {
   getValues(name?: string): Unknown;
 
   onSubmit(event: SyntheticEvent): void;
+  showError(): void;
 }
 
 interface Helper {
   ok: { [k in string]: Set<keyof ValidationStateType> };
-  s: CreateObjectInput;
+  s: CreateObjectInputs<string>;
   em: { [k in string]: ErrorMessageType | undefined };
   tm: { [k in string]: string[] };
   a: { [k in string]: Unknown };
 
-  clean(s: CreateObjectInput): CreateObjectInput;
+  clean(s: CreateObjectInputs<string>): CreateObjectInputs<string>;
 }
 
 export type {
@@ -325,13 +335,13 @@ export type {
   CopyKeyObjType,
   MergeType,
   CopyType,
-  Config,
+  InputConfig,
   Input,
   IDTrackUtil,
   InputStore,
   AsyncCallback,
   AsyncValidationParams,
-  ObjectInput,
+  ObjectInputs,
   ComputeOnceOut,
   ParsedFile,
   InitFileConfig,
@@ -339,9 +349,9 @@ export type {
   MapCallback,
   Method,
   IsValid,
-  CreateObjectInput,
-  ArrayInput,
-  CreateArrayInput,
+  CreateObjectInputs,
+  ArrayInputs,
+  CreateArrayInputs,
   InputProps,
   ValidateState
 };

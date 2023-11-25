@@ -1,6 +1,6 @@
-import type { ObjectInput } from "../../types";
+import type { ObjectInputs } from "../../types";
 
-export const radioIsChecked = (clone: ObjectInput, ID: string) => {
+export const radioIsChecked = (clone: ObjectInputs<string>, ID: string) => {
   let isSelected = false;
   for (const key in clone) {
     if (
