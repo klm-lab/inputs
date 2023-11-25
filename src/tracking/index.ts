@@ -1,6 +1,7 @@
 import type {
   ForEachCallback,
   IDTrackUtil,
+  Input,
   MapCallback,
   TrackUtil
 } from "../types";
@@ -15,7 +16,10 @@ const TRACKING_KEYS = O.freeze([
   "forEach",
   "map",
   "length",
-  "useValues"
+  "useValues",
+  "showError",
+  "getInputById",
+  "getInputsByName"
 ]);
 
 export const trackInputs = <S extends string>(trackingID: S[]) => {
@@ -61,6 +65,31 @@ export const trackInputs = <S extends string>(trackingID: S[]) => {
     };
   });
 
+  track.getInputById = (id: string) => {
+    let i = undefined;
+    for (const t in track) {
+      if (
+        !TRACKING_KEYS.includes(t) &&
+        track[t] &&
+        track[t].getInputById &&
+        i === undefined
+      ) {
+        i = track[t].getInputById(id);
+      }
+    }
+    return i;
+  };
+
+  track.getInputsByName = (name: string) => {
+    const i: Input[] = [];
+    for (const t in track) {
+      if (!TRACKING_KEYS.includes(t) && track[t] && track[t].getInputById) {
+        i.push(...track[t].getInputsByName(name));
+      }
+    }
+    return i;
+  };
+
   ["forEach", "map"].forEach((func) => {
     track[func] = (callback: ForEachCallback | MapCallback) => {
       for (const t in track) {
@@ -71,13 +100,15 @@ export const trackInputs = <S extends string>(trackingID: S[]) => {
     };
   });
 
-  track.reset = () => {
-    for (const t in track) {
-      if (!TRACKING_KEYS.includes(t) && track[t] && track[t].reset) {
-        track[t].reset();
+  ["reset", "showError"].forEach((func) => {
+    track[func] = () => {
+      for (const t in track) {
+        if (!TRACKING_KEYS.includes(t) && track[t] && track[t][func]) {
+          track[t][func]();
+        }
       }
-    }
-  };
+    };
+  });
 
   track.isValid = () => {
     let isValid = true;

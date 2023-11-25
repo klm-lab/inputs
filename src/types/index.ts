@@ -232,6 +232,11 @@ interface CommonForm {
   forEach(callback: ForEachCallback): void;
 
   map(callback: MapCallback): Unknown[];
+
+  showError(): void;
+
+  getInputById(id: string): Input;
+  getInputsByName(name: string): Input[];
 }
 
 type Method = "forEach" | "map";
@@ -250,7 +255,6 @@ interface Form extends CommonForm {
   getValues(name?: string): Unknown;
 
   onSubmit(event: SyntheticEvent): void;
-  showError(): void;
 }
 
 interface IDTrackUtil<I> extends CommonForm {

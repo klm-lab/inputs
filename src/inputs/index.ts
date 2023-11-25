@@ -193,9 +193,30 @@ const computeOnce = (
   };
   const reset = () => {
     store.set((ref) => {
-      ref.entry = initialForm;
+      const entry = ref.entry;
+      const rForm: ObjectInputs<string> = {};
+      O.keys(initialForm).forEach((k) => {
+        rForm[k] = {
+          ...initialForm[k],
+          extraData: entry[k].extraData
+        };
+      });
+      ref.entry = rForm;
       ref.isValid = store.get("initialValid");
     });
+  };
+
+  const getInputById = (id: string) => {
+    return store.get(`entry.${id}`);
+  };
+
+  const getInputsByName = (name: string) => {
+    const entry = store.get("entry");
+    const r: Input[] = [];
+    O.keys(entry).forEach((k) => {
+      entry[k].name === name && r.push(entry[k]);
+    });
+    return r;
   };
 
   const length = O.keys(initialForm).length;
@@ -210,11 +231,16 @@ const computeOnce = (
     map,
     length,
     onSubmit,
-    showError
+    showError,
+    getInputById,
+    getInputsByName
   };
 
   if (config.trackID && config.trackID.ID) {
     config.trackID.getValues = getValues;
+    config.trackID.showError = showError;
+    config.trackID.getInputById = getInputById;
+    config.trackID.getInputsByName = getInputsByName;
     config.trackID.toArray = toArray;
     config.trackID.toObject = toObject;
     config.trackID.forEach = forEach;
