@@ -4,14 +4,14 @@ import type {
   InitFileConfig,
   InputStore,
   ParsedFile,
-  ObjectInput
+  ObjectInputs
 } from "../../types";
 import { validate } from "../../util/validation";
 import { validateState } from "../../util";
 
 export const createFiles = (
   files: FileList | null,
-  clone: ObjectInput,
+  clone: ObjectInputs<string>,
   ID: string,
   store: InputStore,
   config: InputConfig,
@@ -44,7 +44,7 @@ export const createFiles = (
 };
 
 export const parseFile = (
-  clone: ObjectInput,
+  clone: ObjectInputs<string>,
   ID: string,
   store: InputStore,
   config: InputConfig,
@@ -87,24 +87,17 @@ export const parseFile = (
   };
 };
 
-// export const getFile = async (url: string, fileConfig: InitFileConfig) => {
-//   const URL = fileConfig.useDefaultProxyUrl
-//     ? "cors-anywhere.herokuapp.com/" + url
-//     : fileConfig.proxyUrl
-//     ? fileConfig.proxyUrl + "/" + url
-//     : url;
-//   const blob = await fetch(URL).then((r) => r.blob());
-//   const fileName = url.match(/([a-z0-9_-]+\.\w+)(?!.*\/)/gi);
-//   const name = fileName ? fileName[0] : "";
-//   return new File([blob], name, {
-//     type: blob.type
-//   });
-// };
+const getFile = (url: string, blob: Blob) => {
+  const fileName = url.match(/([a-z0-9_-]+\.\w+)(?!.*\/)/gi);
+  return new File([blob], fileName ? fileName[0] : "", {
+    type: blob.type
+  });
+};
 
 export const blobStringJob = (
   value: any,
   store: InputStore,
-  clone: ObjectInput,
+  clone: ObjectInputs<string>,
   ID: string,
   config: InputConfig,
   fileConfig: InitFileConfig,
@@ -126,26 +119,19 @@ export const blobStringJob = (
     ref.entry[ID].valid = valid;
   });
   if (fileConfig.getBlob) {
-    Promise.resolve(fileConfig.getBlob(value)).then((file) => {
+    Promise.resolve(fileConfig.getBlob(value)).then((blob) => {
       store.set((ref) => {
         ref.entry[ID].files[index].gettingFile = false;
-        ref.entry[ID].files[index].file = file;
+        ref.entry[ID].files[index].file = getFile(value, blob);
       });
     });
   }
-
-  // getFile(value, fileConfig).then((file) => {
-  //   store.set((ref) => {
-  //     ref.entry[ID].files[index].gettingFile = false;
-  //     ref.entry[ID].files[index].file = file;
-  //   });
-  // });
 };
 
 export const retrieveBlob = (
   value: any,
   store: InputStore,
-  clone: ObjectInput,
+  clone: ObjectInputs<string>,
   ID: string,
   config: InputConfig,
   fileConfig: InitFileConfig,

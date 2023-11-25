@@ -4,8 +4,9 @@ import type {
   MapCallback,
   TrackUtil
 } from "../types";
+import { O } from "../util";
 
-const TRACKING_KEYS = Object.freeze([
+const TRACKING_KEYS = O.freeze([
   "getValues",
   "reset",
   "isValid",

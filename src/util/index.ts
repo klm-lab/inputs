@@ -1,5 +1,5 @@
 import type {
-  CreateObjectInput,
+  CreateObjectInputs,
   Helper,
   Input,
   InputProps,
@@ -7,7 +7,7 @@ import type {
   InternalInput,
   MatchResultType,
   MergeType,
-  ObjectInput,
+  ObjectInputs,
   ParsedFile,
   Unknown,
   ValidateState,
@@ -16,6 +16,7 @@ import type {
 import { deepMatch, parseCopy, validate } from "./validation";
 import { createCheckboxValue } from "../inputs/handlers/checkbox";
 import { radioIsChecked } from "../inputs/handlers/radio";
+export const O = Object;
 
 const parseValue = (input: Input, value: any) =>
   input.type === "number" || input.validation?.number
@@ -26,7 +27,7 @@ const parseValue = (input: Input, value: any) =>
 
 const initValid = (entry: InternalInput) => {
   const validation = entry.validation || {};
-  const isValid = !Object.keys(validation).length;
+  const isValid = !O.keys(validation).length;
   // return !["", 0, null, undefined].includes(entry.value);
   // return isValid ? !!entry.checked : false;
   return entry.checked ? true : isValid;
@@ -37,7 +38,6 @@ const lockProps = (entry: Input) => {
     id: entry.id,
     name: entry.name,
     type: entry.type,
-    "aria-label": entry.label,
     value: entry.value,
     checked: entry.checked,
     multiple: entry.multiple,
@@ -64,7 +64,8 @@ const commonProps = (entry: InternalInput, id: string) => {
     touched: false,
     placeholder: entry.placeholder ?? entry.name ?? defaultID,
     errorMessage: undefined,
-    validating: false
+    validating: false,
+    extraData: null
   };
 };
 
@@ -148,7 +149,7 @@ const merge = (
 // Match and copy input validation
 const mcv = (
   helper: Helper,
-  state: CreateObjectInput,
+  state: CreateObjectInputs<string>,
   stateKey: string,
   matchOrCopyKey: string,
   keyPath: keyof ValidationStateType
@@ -255,7 +256,7 @@ const mcv = (
  * }.
  *
  */
-const matchRules = (state: CreateObjectInput, helper: Helper) => {
+const matchRules = (state: CreateObjectInputs<string>, helper: Helper) => {
   const patch = {
     checkbox: {
       tab: []
@@ -312,7 +313,7 @@ const matchRules = (state: CreateObjectInput, helper: Helper) => {
     }
   }
 
-  Object.keys(patch).forEach((o) => {
+  O.keys(patch).forEach((o) => {
     if (patch[o].fv) {
       patch[o].tab.forEach((id: string) => {
         // we get the name
@@ -369,7 +370,7 @@ const touchInput = (store: InputStore, helper: Helper) => {
 
 // Validate the state
 // Set form is valid
-const validateState = (data: ObjectInput): ValidateState => {
+const validateState = (data: ObjectInputs<string>): ValidateState => {
   let isValid = true;
   let invalidKey = null;
   for (const formKey in data) {
@@ -382,7 +383,7 @@ const validateState = (data: ObjectInput): ValidateState => {
   return { isValid, invalidKey };
 };
 // T transform array to object and vice versa
-const transformToArray = (state: ObjectInput) => {
+const transformToArray = (state: ObjectInputs<string>) => {
   const result: Input[] = [];
   for (const key in state) {
     result.push(state[key]);
@@ -401,7 +402,7 @@ const cleanFiles = (files: ParsedFile[]) => {
 };
 
 // E extract values from state
-const extractValues = (state: ObjectInput) => {
+const extractValues = (state: ObjectInputs<string>) => {
   const result = {} as { [k in string]: any };
   for (const key in state) {
     const K = state[key].name;

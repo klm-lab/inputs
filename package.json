@@ -79,7 +79,7 @@
     "state"
   ],
   "dependencies": {
-    "aio-store": "^2.4.3"
+    "aio-store": "^2.4.41"
   },
   "peerDependencies": {
     "react": "^18.2.0"

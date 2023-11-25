@@ -1,7 +1,7 @@
-import type { ObjectInput } from "../../types";
+import type { ObjectInputs } from "../../types";
 
 export const createCheckboxValue = (
-  clone: ObjectInput,
+  clone: ObjectInputs<string>,
   ID: string,
   userChange = true
 ) => {
