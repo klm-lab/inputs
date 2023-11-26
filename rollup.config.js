@@ -10,22 +10,37 @@ module.exports = [
     output: [
       {
         file: "lib/index.js",
-        format: "cjs"
-      },
-      {
-        file: "lib/index.min.js",
         format: "cjs",
         plugins: [terser()]
       },
+      // {
+      //   file: "lib/index.min.js",
+      //   format: "cjs",
+      //   plugins: [terser()]
+      // },
       {
-        file: "lib/index.esm.js",
-        format: "esm"
-      },
-      {
-        file: "lib/index.esm.min.js",
+        file: "lib/index.mjs",
         format: "esm",
         plugins: [terser()]
       }
+      // {
+      //   file: "lib/index.esm.min.mjs",
+      //   format: "esm",
+      //   plugins: [terser()]
+      // }
+      // {
+      //   dir: "lib",
+      //   format: "es",
+      //   exports: "named",
+      //   preserveModules: true,
+      //   entryFileNames: "[name].[format].mjs"
+      // },
+      // {
+      //   dir: "lib/cjs",
+      //   format: "cjs",
+      //   exports: "named",
+      //   preserveModules: true
+      // }
     ],
     plugins: [
       nodeResolve(),

@@ -5,6 +5,7 @@
 
 </a>
 
+![publish][action-shield]
 ![version][version-shield]
 ![size][size-shield]
 ![MIT License][license-shield]
@@ -38,11 +39,12 @@ Tracking inputs [HERE][no-tracking-link]
 [MIT][license-url]
 
 
-[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-inputs/2.1.13?style=for-the-badge
+[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-inputs/2.1.14?style=for-the-badge
 
 [license-shield]: https://img.shields.io/github/license/klm-lab/inputs?style=for-the-badge
 
 [version-shield]: https://img.shields.io/npm/v/aio-inputs?style=for-the-badge
+[action-shield]: https://img.shields.io/github/actions/workflow/status/klm-lab/inputs/publish.yml?style=for-the-badge
 
 [radio-link]: https://github.com/klm-lab/inputs/blob/dev/examples/radio.tsx
 [checkbox-link]: https://github.com/klm-lab/inputs/blob/dev/examples/checkbox.tsx
