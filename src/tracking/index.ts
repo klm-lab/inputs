@@ -1,9 +1,11 @@
 import type {
+  ArrayInputs,
   ForEachCallback,
   IDTrackUtil,
   Input,
   MapCallback,
-  TrackUtil
+  TrackUtil,
+  Unknown
 } from "../types";
 import { O } from "../util";
 
@@ -92,11 +94,25 @@ export const trackInputs = <S extends string>(trackingID: S[]) => {
 
   ["forEach", "map"].forEach((func) => {
     track[func] = (callback: ForEachCallback | MapCallback) => {
+      const r: Unknown[] = [];
+      const tabs: ArrayInputs = [];
+      let i = 0;
+      // get all tabs
       for (const t in track) {
         if (!TRACKING_KEYS.includes(t) && track[t] && track[t][func]) {
-          return track[t][func](callback);
+          tabs.push(...track[t].toArray());
         }
       }
+      // loop
+      for (const t in track) {
+        if (!TRACKING_KEYS.includes(t) && track[t] && track[t][func]) {
+          track[t][func]((input: Input, index: number) => {
+            r.push(callback(input, index + i, tabs));
+          });
+          ++i;
+        }
+      }
+      return r;
     };
   });
 

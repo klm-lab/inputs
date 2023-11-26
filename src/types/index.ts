@@ -1,5 +1,4 @@
 import type { StoreType } from "aio-store/react";
-import type { SyntheticEvent } from "react";
 
 type HTMLInputTypeAttribute =
   | "checkbox"
@@ -165,10 +164,9 @@ interface InputProps {
   multiple: boolean;
   placeholder: Unknown;
 
-  onChange(event: SyntheticEvent<HTMLElement>): void;
-
-  onChange(value: Unknown): void;
+  onChange(event: Unknown): void;
 }
+
 interface Input extends InputProps {
   key: string;
   label: Unknown;
@@ -182,7 +180,9 @@ interface Input extends InputProps {
   touched: boolean;
 
   initValue(value: Unknown, initFileConfig?: InitFileConfig): void;
+
   setExtraData(data: Unknown): void;
+
   props: InputProps;
   extraData: Unknown;
 }
@@ -236,10 +236,9 @@ interface CommonForm {
   showError(): void;
 
   getInputById(id: string): Input;
+
   getInputsByName(name: string): Input[];
 }
-
-type Method = "forEach" | "map";
 
 interface ForEachCallback {
   (input: Input, index: number, array: ArrayInputs): void;
@@ -254,7 +253,7 @@ interface Form extends CommonForm {
 
   getValues(name?: string): Unknown;
 
-  onSubmit(event: SyntheticEvent): void;
+  onSubmit(event: Event): void;
 }
 
 interface IDTrackUtil<I> extends CommonForm {
@@ -297,14 +296,19 @@ type AsyncValidationParams = {
 };
 type AsyncCallback = (params: AsyncValidationParams) => void;
 
-interface ComputeOnceOut extends CommonForm {
-  store: InputStore;
+interface CompForm extends CommonForm {
   length: number;
 
   getValues(name?: string): Unknown;
 
-  onSubmit(event: SyntheticEvent): void;
+  onSubmit(event: Event): void;
+
   showError(): void;
+}
+
+interface ComputeOnceOut {
+  store: InputStore;
+  CompForm: CompForm;
 }
 
 interface Helper {
@@ -347,7 +351,6 @@ export type {
   InitFileConfig,
   ForEachCallback,
   MapCallback,
-  Method,
   IsValid,
   CreateObjectInputs,
   ArrayInputs,

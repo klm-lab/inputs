@@ -23,5 +23,15 @@ const He = (): Helper => {
 };
 
 const persist = {} as { [k in string]: ComputeOnceOut };
+const getKey = () => {
+  let i = -1;
+  return {
+    get new() {
+      i++;
+      return `*_*_${i}`;
+    }
+  };
+};
+const KEY = getKey();
 
-export { persist, He };
+export { persist, He, KEY };

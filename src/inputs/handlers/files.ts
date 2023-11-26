@@ -1,13 +1,14 @@
 import type {
-  InputConfig,
   Helper,
   InitFileConfig,
+  InputConfig,
   InputStore,
-  ParsedFile,
-  ObjectInputs
+  ObjectInputs,
+  ParsedFile
 } from "../../types";
 import { validate } from "../../util/validation";
 import { validateState } from "../../util";
+import { KEY } from "../../util/helper";
 
 export const createFiles = (
   files: FileList | null,
@@ -53,7 +54,7 @@ export const parseFile = (
   file: File,
   helper: Helper
 ): ParsedFile => {
-  const key = crypto.randomUUID();
+  const key = KEY.new;
   return {
     gettingFile,
     file,

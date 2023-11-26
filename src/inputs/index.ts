@@ -11,7 +11,6 @@ import type {
   InputStore,
   IsValid,
   MapCallback,
-  Method,
   ObjectInputs,
   ObjStateOutput,
   StateType,
@@ -29,8 +28,8 @@ import {
   transformToArray,
   validateState
 } from "../util";
-import { SyntheticEvent, useMemo } from "react";
-import { He, persist } from "../util/helper";
+import { useMemo } from "react";
+import { He, KEY, persist } from "../util/helper";
 import { createStore } from "aio-store/react";
 import { retrieveBlob } from "./handlers/files";
 import { inputChange } from "./handlers/changes";
@@ -83,7 +82,7 @@ const populate = (state: any, type: StateType, config: InputConfig) => {
   const helper = He();
   for (const stateKey in state) {
     const parseKey = type === "object" ? stateKey : state[stateKey].id;
-    const key = crypto.randomUUID();
+    const key = KEY.new;
     const v: Input = {
       ...commonProps(state[stateKey], stateKey),
       ...state[stateKey],
@@ -156,13 +155,13 @@ const computeOnce = (
   const showError = () => {
     touchInput(store, helper);
   };
-  const onSubmit = (event: SyntheticEvent) => {
+  const onSubmit = (event: Event) => {
     event.preventDefault();
     event.stopPropagation();
     showError();
   };
 
-  const loop = (callback: ForEachCallback | MapCallback, method: Method) => {
+  const loop = (callback: ForEachCallback | MapCallback) => {
     const entry = store.get("entry");
     const v = {
       i: 0,
@@ -173,13 +172,8 @@ const computeOnce = (
       v.mapR.push(callback(entry[key], v.i, v.ar));
       v.i++;
     }
-    if (method === "map") {
-      return v.mapR;
-    }
+    return v.mapR;
   };
-  const forEach = (callback: ForEachCallback) => loop(callback, "forEach");
-
-  const map = (callback: MapCallback) => loop(callback, "map") as Unknown[];
 
   const toArray = (): Input[] & IsValid => {
     const r = transformToArray(store.get("entry")) as Input[] & IsValid;
@@ -222,18 +216,20 @@ const computeOnce = (
   const length = O.keys(initialForm).length;
 
   const result: ComputeOnceOut = {
-    reset,
-    getValues,
-    store,
-    toArray,
-    toObject,
-    forEach,
-    map,
-    length,
-    onSubmit,
-    showError,
-    getInputById,
-    getInputsByName
+    CompForm: {
+      reset,
+      getValues,
+      toArray,
+      toObject,
+      forEach: loop,
+      map: loop,
+      length,
+      onSubmit,
+      showError,
+      getInputById,
+      getInputsByName
+    },
+    store
   };
 
   if (config.trackID && config.trackID.ID) {
@@ -243,8 +239,8 @@ const computeOnce = (
     config.trackID.getInputsByName = getInputsByName;
     config.trackID.toArray = toArray;
     config.trackID.toObject = toObject;
-    config.trackID.forEach = forEach;
-    config.trackID.map = map;
+    config.trackID.forEach = loop;
+    config.trackID.map = loop;
     config.trackID.reset = reset;
     config.trackID.isValid = () => store.get("isValid");
     config.trackID.length = length;
@@ -267,7 +263,7 @@ const parsedInputs = (
   config: InputConfig,
   selective?: string
 ) => {
-  const { store, ...rest } = useMemo(
+  const { store, CompForm } = useMemo(
     () => computeOnce(initialState, type, config),
     []
   );
@@ -276,14 +272,12 @@ const parsedInputs = (
 
   const inputs = selective ? entry[selective] : entry;
 
-  const form = useMemo(() => rest, []);
-
   const parsedInputs =
     type === "object"
       ? inputs
       : transformToArray(inputs as ObjectInputs<string>);
   (parsedInputs as typeof parsedInputs & IsValid).isValid = isValid;
-  return [parsedInputs, form];
+  return [parsedInputs, CompForm];
 };
 
 // External declaration support (Dynamic infer)

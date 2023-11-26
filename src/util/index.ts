@@ -16,7 +16,7 @@ import type {
 import { deepMatch, parseCopy, validate } from "./validation";
 import { createCheckboxValue } from "../inputs/handlers/checkbox";
 import { radioIsChecked } from "../inputs/handlers/radio";
-export const O = Object;
+const O = Object;
 
 const parseValue = (input: Input, value: any) =>
   input.type === "number" || input.validation?.number
@@ -437,5 +437,6 @@ export {
   extractValues,
   parseValue,
   touchInput,
-  lockProps
+  lockProps,
+  O
 };

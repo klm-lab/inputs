@@ -139,11 +139,7 @@ export const inputChange = (
   config: InputConfig,
   helper: Helper
 ) => {
-  const isEvent =
-    ["SyntheticBaseEvent", "SyntheticEvent"].includes(value.constructor.name) ||
-    (!!value?.nativeEvent &&
-      value.nativeEvent.constructor.name === "InputEvent");
-
+  const isEvent = typeof value.preventDefault === "function";
   const element = {} as any;
   if (!isEvent) {
     if (entry[key].type === "file") {
