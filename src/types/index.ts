@@ -138,6 +138,7 @@ interface ParsedFile {
   file: File;
   key: string;
   url: string;
+  loaded: boolean;
   gettingFile: boolean;
   fileUpdate: Unknown;
 
@@ -181,7 +182,7 @@ interface Input extends InputProps {
 
   initValue(value: Unknown, initFileConfig?: InitFileConfig): void;
 
-  setExtraData(data: Unknown): void;
+  set<P extends "extraData" | "type">(prop: P, value: Input[P]): void;
 
   props: InputProps;
   extraData: Unknown;

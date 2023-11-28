@@ -61,8 +61,13 @@ export const parseFile = (
     key,
     url,
     fileUpdate: null,
+    loaded: false,
     onLoad: () => {
       !config.persistID && URL.revokeObjectURL(url);
+      store.set((ref) => {
+        const index = ref.entry[ID].files.findIndex((f) => f.key === key);
+        ref.entry[ID].files[index].loaded = true;
+      });
     },
     selfUpdate: (data: any) => {
       store.set((ref) => {

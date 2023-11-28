@@ -128,10 +128,15 @@ const computeOnce = (
       // initValue
       ref.entry[key].initValue = (value, fileConfig: InitFileConfig = {}) =>
         initValue(entry[key], value, store, config, fileConfig, helper);
-      // setExtraData
-      ref.entry[key].setExtraData = (data) => {
+      // set
+      ref.entry[key].set = (prop, value) => {
         store.set((ref) => {
-          ref.entry[key].extraData = data;
+          if (["extraData", "type"].includes(prop)) {
+            ref.entry[key][prop] = value;
+            if (prop === "type") {
+              ref.entry[key].props.type = value;
+            }
+          }
         });
       };
       // files
