@@ -27,94 +27,48 @@ type HTMLInputTypeAttribute =
 type Unknown = any;
 
 interface CustomValidationType {
-  (
-    value: Unknown,
-    setErrorMessage?: (message: ErrorMessageType) => void
-  ): boolean;
+  (value: Unknown, setErrorMessage: (message: Unknown) => void): boolean;
 }
 
 interface CustomAsyncValidationType {
   (
     value: Unknown,
-    setErrorMessage?: (message: ErrorMessageType) => void
+    setErrorMessage: (message: Unknown) => void
   ): Promise<boolean>;
 }
 
-type MatchResultType = {
-  // matched keys
-  mk: string[];
-  // Last matched
-  lm: string;
-  // validation
-  v?: ValidationStateType;
+type ValidateInputParams = {
+  helper: Helper;
+  entry?: ObjectInputs<string>;
+  input: Input;
+  target: string;
+  value: Unknown;
+  omittedRules?: (keyof ValidationStateType)[];
+  store?: InputStore;
+  asyncCallback?: AsyncCallback;
 };
-
-type MergeType = {
-  omit?: Set<keyof ValidationStateType>;
-  keyPath?: keyof ValidationStateType;
-};
-
-type StringOrMap = string | { value: string; message: ErrorMessageType };
-
-type BooleanOrMap = boolean | { value?: boolean; message: ErrorMessageType };
-
-// type CustomNumber = "only" | "not-allowed" | "allowed";
-//
-// type CustomNumberOrMap =
-//   | CustomNumber
-//   | { value?: CustomNumber; message: ErrorMessageType };
-
-type NumberOrMap = number | { value: number; message: ErrorMessageType };
-
-type CopyKeyObjType = { value: string; omit: Set<keyof ValidationStateType> };
-type CopyType = { value: string; omit: (keyof ValidationStateType)[] };
+type ValidateInput = (params: ValidateInputParams) => ValidationResult;
+type ValidationResult = { em: Unknown; valid: boolean };
+type AsyncValidateInput = (params: ValidateInputParams) => void;
 
 interface ValidationStateType {
-  required?: BooleanOrMap;
-  email?: BooleanOrMap;
-  number?: BooleanOrMap;
-  // negativeNumber?: CustomNumberOrMap;
-  // expoNumber?: CustomNumberOrMap;
-  // floatingNumber?: CustomNumberOrMap;
-  min?: NumberOrMap;
-  max?: NumberOrMap;
-  minLength?: NumberOrMap;
-  minLengthWithoutSpace?: NumberOrMap;
-  maxLength?: NumberOrMap;
-  maxLengthWithoutSpace?: NumberOrMap;
-  match?: string;
-  startsWith?: StringOrMap;
-  endsWith?: StringOrMap;
-  regex?: RegExp & Unknown;
-  copy?: string | CopyType;
-  custom?: CustomValidationType;
-  asyncCustom?: CustomAsyncValidationType;
+  required?: ValidateInput;
+  email?: ValidateInput;
+  number?: ValidateInput;
+  min?: ValidateInput;
+  max?: ValidateInput;
+  minLength?: ValidateInput;
+  minLengthWithoutSpace?: ValidateInput;
+  maxLength?: ValidateInput;
+  maxLengthWithoutSpace?: ValidateInput;
+  match?: ValidateInput;
+  startsWith?: ValidateInput;
+  endsWith?: ValidateInput;
+  regex?: ValidateInput;
+  copy?: ValidateInput;
+  custom?: ValidateInput;
+  asyncCustom?: ValidateInput;
 }
-
-interface RequiredValidationStateType {
-  required: BooleanOrMap;
-  email: BooleanOrMap;
-  number: BooleanOrMap;
-  // negativeNumber: CustomNumberOrMap;
-  // expoNumber: CustomNumberOrMap;
-  // floatingNumber: CustomNumberOrMap;
-  min: NumberOrMap;
-  max: NumberOrMap;
-  minLength: NumberOrMap;
-  minLengthWithoutSpace: NumberOrMap;
-  maxLength: NumberOrMap;
-  maxLengthWithoutSpace: NumberOrMap;
-  match: string;
-  startsWith: StringOrMap;
-  endsWith: StringOrMap;
-  regex: RegExp & Unknown;
-  copy: string | CopyType;
-  asyncCustom: CustomAsyncValidationType;
-  custom: CustomValidationType;
-}
-
-// type StringOrObj = string | { [k in string]: string };
-type ErrorMessageType = Unknown;
 
 interface InternalInput {
   id?: string;
@@ -173,25 +127,26 @@ interface Input extends InputProps {
   label: Unknown;
   files: ParsedFile[];
   mergeChanges: boolean;
-  errorMessage: ErrorMessageType;
-  validation: RequiredValidationStateType;
+  errorMessage: Unknown;
+  validation: Required<ValidationStateType>;
   validating: boolean;
   asyncValidationFailed: boolean;
   valid: boolean;
   touched: boolean;
 
-  initValue(value: Unknown, initFileConfig?: InitFileConfig): void;
+  // initValue(value: Unknown, initFileConfig?: FileConfig): void;
 
-  set<P extends "extraData" | "type">(prop: P, value: Input[P]): void;
+  set<P extends "extraData" | "type" | "value">(
+    prop: P,
+    value: Input[P],
+    fileConfig?: FileConfig
+  ): void;
 
   props: InputProps;
   extraData: Unknown;
 }
 
-interface InitFileConfig {
-  // entryFormat?: "url" | "url[]";
-  // proxyUrl?: string;
-  // useDefaultProxyUrl?: boolean;
+interface FileConfig {
   getBlob?(url: string): Blob | Promise<Blob>;
 }
 
@@ -285,12 +240,13 @@ type InputStore = StoreType<{
   isValid: boolean;
   helper: Helper;
   initialValid: boolean;
-  asyncDelay: number;
+  // asyncDelay: number;
+  config: InputConfig;
 }>;
 type AsyncValidationParams = {
   valid: boolean;
-  em?: ErrorMessageType;
-  entry: Input;
+  em?: Unknown;
+  input: Input;
   store: InputStore;
   failed?: boolean;
   helper: Helper;
@@ -313,13 +269,9 @@ interface ComputeOnceOut {
 }
 
 interface Helper {
-  ok: { [k in string]: Set<keyof ValidationStateType> };
-  s: CreateObjectInputs<string>;
-  em: { [k in string]: ErrorMessageType | undefined };
-  tm: { [k in string]: string[] };
+  key(): string;
+  em: { [k in string]: Unknown };
   a: { [k in string]: Unknown };
-
-  clean(s: CreateObjectInputs<string>): CreateObjectInputs<string>;
 }
 
 export type {
@@ -333,13 +285,7 @@ export type {
   ValidationStateType,
   StateType,
   CustomValidationType,
-  MatchResultType,
   Form,
-  StringOrMap,
-  ErrorMessageType,
-  CopyKeyObjType,
-  MergeType,
-  CopyType,
   InputConfig,
   Input,
   IDTrackUtil,
@@ -349,7 +295,7 @@ export type {
   ObjectInputs,
   ComputeOnceOut,
   ParsedFile,
-  InitFileConfig,
+  FileConfig,
   ForEachCallback,
   MapCallback,
   IsValid,
@@ -357,5 +303,10 @@ export type {
   ArrayInputs,
   CreateArrayInputs,
   InputProps,
-  ValidateState
+  ValidateState,
+  ValidateInput,
+  AsyncValidateInput,
+  ValidateInputParams,
+  CustomAsyncValidationType,
+  ValidationResult
 };

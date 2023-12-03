@@ -7,7 +7,7 @@ import type {
   TrackUtil,
   Unknown
 } from "../types";
-import { O } from "../util";
+import { O } from "../util/helper";
 
 const TRACKING_KEYS = O.freeze([
   "getValues",
@@ -25,7 +25,7 @@ const TRACKING_KEYS = O.freeze([
 ]);
 
 export const trackInputs = <S extends string>(trackingID: S[]) => {
-  const track = {} as any;
+  const track = {} as Unknown;
   trackingID.forEach((a) => {
     track[a] = {
       ID: a
@@ -43,7 +43,7 @@ export const trackInputs = <S extends string>(trackingID: S[]) => {
   };
 
   track.toArray = () => {
-    const arr = [] as any;
+    const arr: ArrayInputs = [];
     for (const t in track) {
       if (!TRACKING_KEYS.includes(t) && track[t] && track[t].toArray) {
         arr.push(...track[t].toArray());
@@ -54,7 +54,7 @@ export const trackInputs = <S extends string>(trackingID: S[]) => {
 
   ["getValues", "toObject", "useValues"].forEach((func) => {
     track[func] = () => {
-      let result = {} as any;
+      let result = {} as Unknown;
       for (const t in track) {
         if (!TRACKING_KEYS.includes(t) && track[t] && track[t][func]) {
           result = {

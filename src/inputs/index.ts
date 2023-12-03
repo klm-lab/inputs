@@ -3,9 +3,9 @@ import type {
   ComputeOnceOut,
   CreateArrayInputs,
   CreateObjectInputs,
+  FileConfig,
   ForEachCallback,
   Helper,
-  InitFileConfig,
   Input,
   InputConfig,
   InputStore,
@@ -20,86 +20,76 @@ import type {
 import {
   commonProps,
   extractValues,
-  lockProps,
-  matchRules,
-  O,
-  parseValue,
+  syncRCAndValid,
   touchInput,
   transformToArray,
   validateState
 } from "../util";
 import { useMemo } from "react";
-import { He, KEY, persist } from "../util/helper";
+import { He, O, persist } from "../util/helper";
 import { createStore } from "aio-store/react";
 import { retrieveBlob } from "./handlers/files";
 import { inputChange } from "./handlers/changes";
-import { validate } from "../util/validation";
+import { validate } from "./validations";
 
 const initValue = (
   input: Input,
   value: Unknown,
   store: InputStore,
-  config: InputConfig,
-  fileConfig: InitFileConfig,
+  fileConfig: FileConfig,
   helper: Helper
 ) => {
   // Clone inputs
-  const clone = store.get("entry");
-  const ID = input.id;
+  const entry = store.get("entry");
+  const id = input.id;
 
-  const { valid } = validate(helper, clone, ID, value);
+  const { valid } = validate(helper, entry, id, value);
 
-  /* Handle type file. It is async,
-   * First, we send back an url
-   * */
   if (input.type === "file") {
-    retrieveBlob(value, store, clone, ID, config, fileConfig, valid, helper);
+    retrieveBlob(value, store, id, fileConfig, valid, helper);
     return;
   }
   if (input.type === "radio") {
     // Check right radio input
-    clone[ID].checked = clone[ID].value === value;
-    clone[ID].props.checked = clone[ID].value === value;
+    entry[id].checked = entry[id].value === value;
+    entry[id].props.checked = entry[id].value === value;
   } else if (input.type === "checkbox") {
     // Toggle the checkbox input
-    const cbV = (value as Unknown[]).includes(clone[ID].value);
-    clone[ID].checked = cbV;
-    clone[ID].props.checked = cbV;
+    const cbV = (value as Unknown[]).includes(entry[id].value);
+    entry[id].checked = cbV;
+    entry[id].props.checked = cbV;
   } else {
     // Parse value if number
-    clone[ID].value = parseValue(input, value);
-    clone[ID].props.value = parseValue(input, value);
+    entry[id].value = value;
+    entry[id].props.value = value;
   }
   // Sync handlers
   store.set((ref) => {
-    ref.entry[ID] = clone[ID];
-    ref.entry[ID].valid = valid;
+    ref.entry[id] = entry[id];
+    ref.entry[id].valid = valid;
   });
 };
 
-const populate = (state: any, type: StateType, config: InputConfig) => {
-  const final = {} as CreateObjectInputs<string>;
+const populate = (state: Unknown, type: StateType, config: InputConfig) => {
+  const final = {} as ObjectInputs<string>;
   const helper = He();
   for (const stateKey in state) {
     const parseKey = type === "object" ? stateKey : state[stateKey].id;
-    const key = KEY.new;
-    const v: Input = {
+    const key = helper.key();
+    final[parseKey] = {
       ...commonProps(state[stateKey], stateKey),
       ...state[stateKey],
       ...(type === "object" ? { id: stateKey, key } : { key })
     };
-    v.props = lockProps(v);
-    final[parseKey] = v;
-    helper.s[parseKey] = { ...v };
   }
-  const entry = helper.clean(matchRules(final, helper)) as ObjectInputs<string>;
-  const isValid = validateState(entry).isValid;
+  const { entry, isValid } = syncRCAndValid(final, helper);
   return {
     entry,
     isValid,
     helper,
     initialValid: isValid,
-    asyncDelay: config.asyncDelay ?? 800
+    config
+    //asyncDelay: config.asyncDelay ?? 800
   };
 };
 
@@ -121,21 +111,22 @@ const computeOnce = (
     for (const key in entry) {
       // onChange
       ref.entry[key].onChange = (value) =>
-        inputChange(value, key, entry, store, config, helper);
+        inputChange(value, entry[key], store, helper);
       // Props onChange
       ref.entry[key].props.onChange = (value) =>
-        inputChange(value, key, entry, store, config, helper);
-      // initValue
-      ref.entry[key].initValue = (value, fileConfig: InitFileConfig = {}) =>
-        initValue(entry[key], value, store, config, fileConfig, helper);
+        inputChange(value, entry[key], store, helper);
       // set
-      ref.entry[key].set = (prop, value) => {
+      ref.entry[key].set = (prop, value, fileConfig: FileConfig = {}) => {
         store.set((ref) => {
-          if (["extraData", "type"].includes(prop)) {
+          if (prop === "value") {
+            initValue(entry[key], value, store, fileConfig, helper);
+          }
+          if (prop === "type") {
+            ref.entry[key].type = value;
+            ref.entry[key].props.type = value;
+          }
+          if (prop === "extraData") {
             ref.entry[key][prop] = value;
-            if (prop === "type") {
-              ref.entry[key].props.type = value;
-            }
           }
         });
       };

@@ -1,21 +1,21 @@
 import type { ObjectInputs } from "../../types";
 
 export const createCheckboxValue = (
-  clone: ObjectInputs<string>,
+  entry: ObjectInputs<string>,
   ID: string,
   userChange = true
 ) => {
   const selected = [] as string[];
-  userChange && !clone[ID].checked && selected.push(clone[ID].value);
-  for (const key in clone) {
+  userChange && !entry[ID].checked && selected.push(entry[ID].value);
+  for (const key in entry) {
     if (
-      clone[key].type === "checkbox" &&
+      entry[key].type === "checkbox" &&
       (userChange ? key !== ID : true) &&
-      clone[key].name === clone[ID].name
+      entry[key].name === entry[ID].name
     ) {
-      clone[key].checked && selected.push(clone[key].value);
+      entry[key].checked && selected.push(entry[key].value);
       if (userChange) {
-        clone[key].valid = true;
+        entry[key].valid = true;
       }
     }
   }

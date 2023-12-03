@@ -1,37 +1,33 @@
 import type {
   Helper,
-  InitFileConfig,
-  InputConfig,
+  FileConfig,
+  Input,
   InputStore,
-  ObjectInputs,
-  ParsedFile
+  ParsedFile,
+  Unknown
 } from "../../types";
-import { validate } from "../../util/validation";
+import { validate } from "../validations";
 import { validateState } from "../../util";
-import { KEY } from "../../util/helper";
 
 export const createFiles = (
-  files: FileList | null,
-  clone: ObjectInputs<string>,
-  ID: string,
+  element: HTMLInputElement & { ip: Input },
   store: InputStore,
-  config: InputConfig,
   helper: Helper
 ) => {
-  const entry = clone[ID];
-  const parsed: ParsedFile[] = entry.mergeChanges ? [...entry.files] : [];
+  const id = element.ip.id;
+  const files = element.files;
+  const input = element.ip;
+  const parsed: ParsedFile[] = input.mergeChanges ? [...input.files] : [];
   //  const dataTransfer = new DataTransfer();
-  if (!entry.mergeChanges) {
-    entry.files.forEach((p) => URL.revokeObjectURL(p.url));
+  if (!input.mergeChanges) {
+    input.files.forEach((p) => URL.revokeObjectURL(p.url));
   }
   if (files) {
     for (let i = 0; i < files.length; i++) {
       parsed.push(
         parseFile(
-          clone,
-          ID,
+          id,
           store,
-          config,
           URL.createObjectURL(files[i]),
           false,
           files[i],
@@ -45,16 +41,14 @@ export const createFiles = (
 };
 
 export const parseFile = (
-  clone: ObjectInputs<string>,
-  ID: string,
+  id: string,
   store: InputStore,
-  config: InputConfig,
   url: string,
   gettingFile: boolean,
   file: File,
   helper: Helper
 ): ParsedFile => {
-  const key = KEY.new;
+  const key = helper.key();
   return {
     gettingFile,
     file,
@@ -63,29 +57,30 @@ export const parseFile = (
     fileUpdate: null,
     loaded: false,
     onLoad: () => {
-      !config.persistID && URL.revokeObjectURL(url);
+      !store.get("config").persistID && URL.revokeObjectURL(url);
       store.set((ref) => {
-        const index = ref.entry[ID].files.findIndex((f) => f.key === key);
-        ref.entry[ID].files[index].loaded = true;
+        const index = ref.entry[id].files.findIndex((f) => f.key === key);
+        ref.entry[id].files[index].loaded = true;
       });
     },
-    selfUpdate: (data: any) => {
+    selfUpdate: (data: Unknown) => {
       store.set((ref) => {
-        const files = ref.entry[ID].files;
+        const files = ref.entry[id].files;
         const index = files.findIndex((f) => f.key === key);
         files[index].fileUpdate = data;
-        ref.entry[ID].files = files;
+        ref.entry[id].files = files;
       });
     },
     selfRemove: () => {
       store.set((ref) => {
-        const files = ref.entry[ID].files;
+        const entry = store.get("entry");
+        const files = ref.entry[id].files;
         const newFiles = files.filter((f) => f.key !== key);
         // Validate input
-        const { valid, em } = validate(helper, clone, ID, newFiles);
-        ref.entry[ID].files = newFiles;
-        ref.entry[ID].valid = valid;
-        ref.entry[ID].errorMessage = em;
+        const { valid, em } = validate(helper, entry, id, newFiles);
+        ref.entry[id].files = newFiles;
+        ref.entry[id].valid = valid;
+        ref.entry[id].errorMessage = em;
         // Validate form
         ref.isValid = validateState(ref.entry).isValid;
       });
@@ -101,77 +96,51 @@ const getFile = (url: string, blob: Blob) => {
 };
 
 export const blobStringJob = (
-  value: any,
+  value: Unknown,
   store: InputStore,
-  clone: ObjectInputs<string>,
-  ID: string,
-  config: InputConfig,
-  fileConfig: InitFileConfig,
+  id: string,
+  fileConfig: FileConfig,
   index: number,
   valid: boolean,
   helper: Helper
 ) => {
   store.set((ref) => {
-    ref.entry[ID].files[index] = parseFile(
-      clone,
-      ID,
+    ref.entry[id].files[index] = parseFile(
+      id,
       store,
-      config,
       value,
       !!fileConfig.getBlob, // true is getBlob is present
       {} as File,
       helper
     );
-    ref.entry[ID].valid = valid;
+    ref.entry[id].valid = valid;
   });
   if (fileConfig.getBlob) {
     Promise.resolve(fileConfig.getBlob(value)).then((blob) => {
       store.set((ref) => {
-        ref.entry[ID].files[index].gettingFile = false;
-        ref.entry[ID].files[index].file = getFile(value, blob);
+        ref.entry[id].files[index].gettingFile = false;
+        ref.entry[id].files[index].file = getFile(value, blob);
       });
     });
   }
 };
 
 export const retrieveBlob = (
-  value: any,
+  value: Unknown,
   store: InputStore,
-  clone: ObjectInputs<string>,
-  ID: string,
-  config: InputConfig,
-  fileConfig: InitFileConfig,
+  id: string,
+  fileConfig: FileConfig,
   valid: boolean,
   helper: Helper
 ) => {
   if (value instanceof Array) {
     value.forEach((v, index) => {
-      blobStringJob(
-        v,
-        store,
-        clone,
-        ID,
-        config,
-        fileConfig,
-        index,
-        valid,
-        helper
-      );
+      blobStringJob(v, store, id, fileConfig, index, valid, helper);
     });
     return;
   }
   if (typeof value === "string") {
-    blobStringJob(
-      value,
-      store,
-      clone,
-      ID,
-      config,
-      fileConfig,
-      0,
-      valid,
-      helper
-    );
+    blobStringJob(value, store, id, fileConfig, 0, valid, helper);
     return;
   }
   throw Error(
