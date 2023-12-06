@@ -16,17 +16,17 @@ const validate = (
   omittedRules: (keyof ValidationStateType)[] = []
 ): ValidationResult => {
   const input: Input = entry[target];
-  const rules: ValidationStateType = { ...input.validation } || {};
+  const rules: ValidationStateType = input.validation || {};
   const result = {
     valid: true,
     em: helper.em[target]
   };
-  for (let i = 0; i < omittedRules.length; i++) {
-    delete rules[omittedRules[i]];
-  }
   const rulesKeys = O.keys(rules);
   for (let i = 0; i < rulesKeys.length; i++) {
-    if (rulesKeys[i] !== "asyncCustom") {
+    if (
+      rulesKeys[i] !== "asyncCustom" &&
+      !omittedRules.includes(rulesKeys[i] as keyof ValidationStateType)
+    ) {
       const v = (rules[rulesKeys[i] as keyof ValidationStateType] as Unknown)({
         entry,
         helper,

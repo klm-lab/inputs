@@ -6,7 +6,7 @@ import type {
   ParsedFile,
   Unknown
 } from "../../types";
-import { AsyncValidationParams } from "../../types";
+import { AsyncValidationParams, InternalInput } from "../../types";
 import { validate } from "../validations";
 import { validateState } from "../../util";
 import { createFiles } from "./files";
@@ -36,6 +36,12 @@ const asyncCallback = ({
   const { valid, em } = validate(helper, entry, id, entry[id].value);
   // Add server validation only actual data is valid
   entry[id].valid = valid && asyncValid;
+
+  if (entry[id].valid) {
+    (input as InternalInput).runOnValid &&
+      (input as InternalInput).runOnValid!(entry[id].value);
+  }
+
   // Add server error message only actual data is valid else keep actual error Message
   entry[id].errorMessage = valid ? asyncErrorMessage : em;
   // Finish calling server
@@ -89,6 +95,9 @@ const onChange = (
   const toValidate =
     input.type === "checkbox" ? createCheckboxValue(entry, id) : value;
 
+  (input as InternalInput).runOnChange &&
+    (input as InternalInput).runOnChange!(toValidate);
+
   const { valid, em } = validate(helper, entry, id, toValidate);
 
   // Touched input
@@ -103,9 +112,13 @@ const onChange = (
   entry[id].asyncValidationFailed = false;
 
   // if valid and async is there, we call async validation
+  if (valid && !input.validation?.asyncCustom) {
+    (input as InternalInput).runOnValid &&
+      (input as InternalInput).runOnValid!(toValidate);
+  }
   valid &&
-    (input.validation?.asyncCustom as unknown) &&
-    input.validation?.asyncCustom({
+    input.validation?.asyncCustom &&
+    input.validation.asyncCustom({
       store,
       helper,
       input,

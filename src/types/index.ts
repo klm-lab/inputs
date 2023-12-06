@@ -86,6 +86,8 @@ interface InternalInput {
   errorMessage?: Unknown;
   validation?: ValidationStateType;
   extraData?: Unknown;
+  runOnChange?(value?: Unknown): void;
+  runOnValid?(value?: Unknown): void;
 }
 
 interface ParsedFile {
@@ -113,6 +115,8 @@ interface InputProps {
   id: string;
   accept: string;
   name: string;
+  min: number | string;
+  max: number | string;
   type: HTMLInputTypeAttribute;
   value: Unknown;
   checked: boolean;
