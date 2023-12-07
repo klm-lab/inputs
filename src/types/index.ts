@@ -242,7 +242,7 @@ interface TrackUtil extends CommonForm {
 type InputStore = StoreType<{
   entry: ObjectInputs<string>;
   isValid: boolean;
-  helper: Helper;
+  // helper: Helper;
   initialValid: boolean;
   // asyncDelay: number;
   config: InputConfig;
@@ -269,7 +269,7 @@ interface CompForm extends CommonForm {
 
 interface ComputeOnceOut {
   store: InputStore;
-  CompForm: CompForm;
+  compForm: CompForm;
 }
 
 interface Helper {
@@ -278,7 +278,44 @@ interface Helper {
   a: { [k in string]: Unknown };
 }
 
+interface InputsHook {
+  // External declaration support (Dynamic infer)
+  <I>(
+    initialState: I extends string
+      ? string
+      : I extends Array<Unknown>
+      ? CreateArrayInputs | I
+      : CreateObjectInputs<keyof I> | I,
+    config?: InputConfig
+  ): I extends string
+    ? StringStateOutput
+    : I extends Array<Unknown>
+    ? ArrayStateOutput
+    : ObjStateOutput<I>;
+  // Internal declaration object
+  <I extends CreateObjectInputs<keyof I>>(
+    initialState: CreateObjectInputs<keyof I> | I,
+    config?: InputConfig
+  ): ObjStateOutput<I>;
+  // Internal declaration Array
+  <I extends CreateArrayInputs>(
+    initialState: CreateArrayInputs | I,
+    config?: InputConfig
+  ): ArrayStateOutput;
+  // string
+  <I extends string>(initialState: I, config?: InputConfig): StringStateOutput;
+}
+
+type HookType = "file" | "textBased" | "radio" | "checkbox";
+
+interface InternalInputsHook {
+  (initialState: Unknown, config: Unknown, type: HookType): Unknown;
+}
+
 export type {
+  InputsHook,
+  InternalInputsHook,
+  HookType,
   Helper,
   TrackUtil,
   ObjStateOutput,

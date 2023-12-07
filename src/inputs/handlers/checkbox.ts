@@ -6,13 +6,8 @@ export const createCheckboxValue = (
   userChange = true
 ) => {
   const selected = [] as string[];
-  userChange && !entry[ID].checked && selected.push(entry[ID].value);
   for (const key in entry) {
-    if (
-      entry[key].type === "checkbox" &&
-      (userChange ? key !== ID : true) &&
-      entry[key].name === entry[ID].name
-    ) {
+    if (entry[key].type === "checkbox" && entry[key].name === entry[ID].name) {
       entry[key].checked && selected.push(entry[key].value);
       if (userChange) {
         entry[key].valid = true;

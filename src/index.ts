@@ -1,4 +1,4 @@
-export { useInputs } from "./inputs";
+export { useInputs } from "./inputs/hook";
 export { trackInputs } from "./tracking";
 export { required } from "./inputs/validations/required";
 export { number, min, max } from "./inputs/validations/number";

@@ -3,6 +3,7 @@ import type {
   Input,
   ObjectInputs,
   Unknown,
+  ValidateState,
   ValidationResult,
   ValidationStateType
 } from "../../types";
@@ -45,4 +46,18 @@ const validate = (
   return result;
 };
 
-export { validate };
+// Validate the state
+const validateState = (data: ObjectInputs<string>): ValidateState => {
+  let isValid = true;
+  let invalidKey = null;
+  for (const formKey in data) {
+    isValid = isValid && !data[formKey].validating && data[formKey].valid;
+    if (!isValid) {
+      invalidKey = formKey;
+      break;
+    }
+  }
+  return { isValid, invalidKey };
+};
+
+export { validate, validateState };

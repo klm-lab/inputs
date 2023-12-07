@@ -1,18 +1,23 @@
 import type {
+  FileConfig,
   Helper,
   Input,
+  InputConfig,
   InputProps,
   InputStore,
   InternalInput,
   ObjectInputs,
   ParsedFile,
-  Unknown,
-  ValidateState
+  StateType,
+  Unknown
 } from "../types";
-import { validate } from "../inputs/validations";
+import { validate, validateState } from "../inputs/validations";
 import { createCheckboxValue } from "../inputs/handlers/checkbox";
 import { radioIsChecked } from "../inputs/handlers/radio";
-import { O } from "./helper";
+import { He, O } from "./helper";
+import { inputChange } from "../inputs/handlers/changes";
+import { createStore } from "aio-store/react";
+import { initValue } from "../inputs/handlers/init";
 
 const parseValue = (input: Input, value: Unknown) =>
   input.type === "number" || (input.validation?.number as unknown)
@@ -35,6 +40,7 @@ const commonProps = (entry: InternalInput, id: string) => {
         : ["radio", "checkbox"].includes(entry.type as string)
         ? entry.label ?? defaultID
         : "",
+    files: [],
     checked: false,
     multiple: false,
     valid: entry.checked ? true : !O.keys(entry.validation ?? {}).length,
@@ -46,9 +52,80 @@ const commonProps = (entry: InternalInput, id: string) => {
   };
 };
 
+export const finalizeInputs = (
+  initialState: Unknown,
+  type: StateType,
+  config: InputConfig
+) => {
+  const entry = {} as ObjectInputs<string>;
+  const store = createStore({}) as unknown as InputStore;
+  let isValid = true;
+  const helper = He();
+  for (const stateKey in initialState) {
+    const id = type === "object" ? stateKey : initialState[stateKey].id;
+    const key = helper.key();
+    entry[id] = {
+      ...commonProps(initialState[stateKey], stateKey),
+      ...initialState[stateKey],
+      ...(type === "object" ? { id, key } : { key })
+    };
+    entry[id].props = {
+      id: id,
+      name: entry[id].name,
+      type: entry[id].type,
+      value: entry[id].value,
+      checked: entry[id].checked,
+      multiple: entry[id].multiple,
+      placeholder: entry[id].placeholder
+    } as InputProps;
+
+    // we save the error message
+    helper.em[id] = entry[id].errorMessage;
+
+    // Validating form to get initial valid state
+    isValid = isValid && !entry[id].validating && entry[id].valid;
+
+    // onChange
+    entry[id].onChange = (value: Unknown) =>
+      inputChange(value, entry[id], store, helper);
+    // Props onChange
+    entry[id].props.onChange = (value: Unknown) =>
+      inputChange(value, entry[id], store, helper);
+    // set
+    entry[id].set = (
+      prop: keyof Input,
+      value: Unknown,
+      fileConfig: FileConfig = {}
+    ) => {
+      store.set((ref) => {
+        if (prop === "value") {
+          initValue(entry[id], value, store, fileConfig, helper);
+        }
+        if (prop === "type") {
+          ref.entry[id].type = value;
+          ref.entry[id].props.type = value;
+        }
+        if (prop === "extraData") {
+          ref.entry[id][prop] = value;
+        }
+      });
+    };
+    // files
+    entry[id].files = [];
+  }
+
+  syncRCAndValid(entry, helper);
+  store.set((ref) => {
+    ref.entry = entry;
+    ref.initialValid = isValid;
+    ref.isValid = isValid;
+    ref.config = config;
+  });
+  return { helper, store, initialForm: entry };
+};
+
 // Sync checkbox and radio input and validate the form to get initial valid state
 const syncRCAndValid = (entry: ObjectInputs<string>, helper: Helper) => {
-  let isValid = true;
   const patch = {
     checkbox: {
       tab: []
@@ -71,22 +148,6 @@ const syncRCAndValid = (entry: ObjectInputs<string>, helper: Helper) => {
         patch[i.type].fv = true;
       }
     }
-
-    // we save the error message
-    helper.em[stateKey] = i.errorMessage;
-    // we add props
-    i.props = {
-      id: i.id,
-      name: i.name,
-      type: i.type,
-      value: i.value,
-      checked: i.checked,
-      multiple: i.multiple,
-      placeholder: i.placeholder
-    } as InputProps;
-
-    // Validating form to get initial valid state
-    isValid = isValid && !i.validating && i.valid;
   }
 
   O.keys(patch).forEach((o) => {
@@ -110,7 +171,6 @@ const syncRCAndValid = (entry: ObjectInputs<string>, helper: Helper) => {
       });
     }
   });
-  return { entry, isValid };
 };
 
 const touchInput = (store: InputStore, helper: Helper) => {
@@ -143,19 +203,6 @@ const touchInput = (store: InputStore, helper: Helper) => {
   return isValid;
 };
 
-// Validate the state
-const validateState = (data: ObjectInputs<string>): ValidateState => {
-  let isValid = true;
-  let invalidKey = null;
-  for (const formKey in data) {
-    isValid = isValid && !data[formKey].validating && data[formKey].valid;
-    if (!isValid) {
-      invalidKey = formKey;
-      break;
-    }
-  }
-  return { isValid, invalidKey };
-};
 // T transform array to object and vice versa
 const transformToArray = (state: ObjectInputs<string>) => {
   const result: Input[] = [];
@@ -175,7 +222,6 @@ const cleanFiles = (files: ParsedFile[]) => {
   });
 };
 
-// E extract values from state
 const extractValues = (state: ObjectInputs<string>) => {
   const result = {} as { [k in string]: Unknown };
   for (const key in state) {
@@ -205,7 +251,6 @@ const extractValues = (state: ObjectInputs<string>) => {
 
 export {
   commonProps,
-  validateState,
   syncRCAndValid,
   transformToArray,
   extractValues,
