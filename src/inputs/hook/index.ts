@@ -1,27 +1,14 @@
 import { computeOnce } from "../index";
 import type {
-  // Input,
   InputConfig,
   InputsHook,
   IsValid,
   ObjectInputs,
   StateType,
-  // StringStateOutput,
   Unknown
 } from "../../types";
 import { useMemo } from "react";
-import { transformToArray } from "../../util"; // // External declaration support (Dynamic infer)
-
-// const parseInput = (initialState: Unknown, config: InputConfig) => {
-//   const { store, compForm } = useMemo(
-//     () => computeOnce(initialState, "object", config),
-//     []
-//   );
-//
-//   const input = store(`entry.${initialState}`) as Input & { isValid: boolean };
-//   input.isValid = input.valid;
-//   return [input, compForm];
-// };
+import { transformToArray } from "../../util";
 
 const parsedInputs = (
   initialState: Unknown,
@@ -100,46 +87,5 @@ const useInputs: InputsHook = (
   }
   return parsedInputs(initialState, "object", config);
 };
-
-// const useObjectRadios = () => {};
-//
-// const useArrayRadios = () => {};
-//
-// const useCheckbox = () => {};
-//
-// const useObjectCheckboxs = () => {};
-//
-// const useArrayCheckboxs = () => {};
-//
-// const useFile = () => {};
-//
-// const useObjectFiles = () => {};
-//
-// const useArrayFiles = () => {};
-//
-// const useSelect = () => {};
-//
-// const useObjectSelects = () => {};
-//
-// const useArraySelects = () => {};
-//
-// const useInput = (initialState: string, config: InputConfig = {}) =>
-//   parseInput(
-//     {
-//       [initialState]: {
-//         type: "text"
-//       }
-//     },
-//     config
-//   ) as StringStateOutput;
-//
-// const useObjectInputs = () => {};
-//
-// const useArrayInputs = () => {};
-
-// const useFileInputs: InputsHook = (
-//   initialState: Unknown,
-//   config?: InputConfig
-// ): Unknown => useInputs(initialState, config, "file");
 
 export { useInputs };

@@ -282,7 +282,7 @@ interface InputsHook {
   // External declaration support (Dynamic infer)
   <I>(
     initialState: I extends string
-      ? string
+      ? I
       : I extends Array<Unknown>
       ? CreateArrayInputs | I
       : CreateObjectInputs<keyof I> | I,
