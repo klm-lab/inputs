@@ -1,161 +1,178 @@
 import type {
-  Helper,
+  GetValue,
   Input,
+  InputConfig,
   InputProps,
   InputStore,
-  InternalInput,
   ObjectInputs,
-  ParsedFile,
-  Unknown,
-  ValidateState
+  Unknown
 } from "../types";
-import { validate } from "../inputs/validations";
+import { validate, validateState } from "../inputs/validations";
 import { createCheckboxValue } from "../inputs/handlers/checkbox";
-import { radioIsChecked } from "../inputs/handlers/radio";
-import { O } from "./helper";
+import { Helper, keys, matchType } from "./helper";
+import { createStore } from "aio-store/react";
+import { initValue, nextChange, tem } from "../inputs/handlers/changes";
+import { cleanFiles, createFiles } from "../inputs/handlers/files";
+import { createSelectFiles } from "../inputs/handlers/select";
 
-const parseValue = (input: Input, value: Unknown) =>
-  input.type === "number" || (input.validation?.number as unknown)
-    ? !isNaN(Number(value))
-      ? Number(value)
-      : value
-    : value;
-
-// Spread common props
-const commonProps = (entry: InternalInput, id: string) => {
-  const defaultID = entry.id ?? id;
-  return {
-    id,
-    name: defaultID,
-    label: entry.name ?? defaultID,
-    type: entry.type ?? "text",
+const createInput = (
+  entry: Unknown,
+  store: InputStore,
+  inp: Unknown,
+  objKey: string
+) => {
+  const key = store.h.key();
+  const isString = matchType(inp, "string");
+  const { id, multiple, type, checked, validation = {} } = inp;
+  const fIp = {
+    id: id ?? key,
+    name: isString ? inp : key,
     value:
-      entry.type === "select" && entry.multiple
+      type === "select" && multiple
         ? []
-        : ["radio", "checkbox"].includes(entry.type as string)
-        ? entry.label ?? defaultID
+        : ["radio", "checkbox"].includes(type)
+        ? objKey
         : "",
+    files: [],
     checked: false,
-    multiple: false,
-    valid: entry.checked ? true : !O.keys(entry.validation ?? {}).length,
-    touched: false,
-    placeholder: entry.name ?? defaultID,
-    errorMessage: undefined,
-    validating: false,
-    extraData: null
-  };
-};
+    valid: checked ? true : !keys(validation).length,
+    required: !!validation?.required,
+    ...(isString ? {} : inp),
+    key
+  } as Input & GetValue;
 
-// Sync checkbox and radio input and validate the form to get initial valid state
-const syncRCAndValid = (entry: ObjectInputs<string>, helper: Helper) => {
-  let isValid = true;
-  const patch = {
-    checkbox: {
-      tab: []
-    },
-    radio: {
-      tab: []
+  fIp.g = function (oldValue, data) {
+    const { type, value, files, checked, name } = this;
+    if (type === "file") {
+      return cleanFiles(files);
     }
-  } as Unknown;
-
-  for (const stateKey in entry) {
-    const i = entry[stateKey];
-    if (i.type === "checkbox" || i.type === "radio") {
-      patch[i.type].tab.push(stateKey);
-      if (!i.valid && !patch[i.type].fv) {
-        patch[i.type][i.name as string] = {
-          validation: i.validation,
-          errorMessage: i.errorMessage
-        };
-        // Found validation
-        patch[i.type].fv = true;
+    if (type === "radio") {
+      return data ? "" : checked ? value : oldValue ?? "";
+    }
+    if (type === "checkbox") {
+      if (data) {
+        return createCheckboxValue(data, objKey, false);
       }
+      if (store.h.ev[name].c > 1) {
+        const v = oldValue || [];
+        checked && v.push(value);
+        return v;
+      }
+      return checked;
+    }
+    return value;
+  };
+
+  fIp.onChange = (value) => {
+    const isEvent = matchType(value.preventDefault, "function");
+    const entry = store.get("i");
+    const input = entry[objKey];
+    const { type, placeholder, multiple } = input;
+    const targetValue = isEvent
+      ? value.target.value || value.nativeEvent.text || ""
+      : value;
+
+    if (type === "file") {
+      entry[objKey].files = createFiles(
+        isEvent ? new Set(value.target.files) : value,
+        store,
+        objKey,
+        input
+      );
     }
 
-    // we save the error message
-    helper.em[stateKey] = i.errorMessage;
-    // we add props
-    i.props = {
-      id: i.id,
-      name: i.name,
-      type: i.type,
-      value: i.value,
-      checked: i.checked,
-      multiple: i.multiple,
-      placeholder: i.placeholder
-    } as InputProps;
+    const values =
+      type === "select"
+        ? multiple
+          ? createSelectFiles(
+              isEvent ? new Set(value.target.selectedOptions) : value,
+              input,
+              isEvent
+            )
+          : targetValue !== "" && targetValue !== placeholder
+          ? targetValue
+          : ""
+        : targetValue;
 
-    // Validating form to get initial valid state
-    isValid = isValid && !i.validating && i.valid;
-  }
-
-  O.keys(patch).forEach((o) => {
-    if (patch[o].fv) {
-      patch[o].tab.forEach((id: string) => {
-        // we get the name
-        const name = entry[id].name as string;
-        // define errorMessage
-        const errorMessage =
-          entry[id].errorMessage ?? patch[o][name].errorMessage;
-        // we save the error message
-        helper.em[id] = errorMessage;
-        // define validation
-        entry[id].validation = !entry[id].valid
-          ? entry[id].validation
-          : patch[o][name].validation;
-        // set errorMessage
-        entry[id].errorMessage = errorMessage;
-        // set valid
-        entry[id].valid = patch[o][name].validation ? false : entry[id].valid;
-      });
-    }
-  });
-  return { entry, isValid };
-};
-
-const touchInput = (store: InputStore, helper: Helper) => {
-  const data = store.get("entry");
-  const { isValid, invalidKey } = validateState(data);
-  if (invalidKey) {
-    const input = data[invalidKey];
-    const value =
-      input.type === "file"
-        ? input.files
-        : input.type === "checkbox"
-        ? createCheckboxValue(data, invalidKey, false)
-        : input.value;
-
-    const radioValid = radioIsChecked(data, invalidKey);
-
-    const { em } = validate(
-      helper,
-      data,
-      invalidKey,
-      input.type === "radio" ? (radioValid ? value : null) : value
-    );
-
+    nextChange(values, store, entry, input, objKey, type);
+  };
+  // Let user set value, type and data
+  fIp.set = (prop, value, fileConfig = {}) => {
     store.set((ref) => {
-      ref.entry[invalidKey].touched = true;
-      ref.entry[invalidKey].valid = false;
-      ref.entry[invalidKey].errorMessage = em;
+      const input = ref.i[objKey];
+      if (prop === "value") {
+        store.fc = fileConfig;
+        initValue(objKey, value, store, input.type);
+      }
+      if (prop === "type") {
+        input.type = value;
+        input.props.type = value;
+      }
+      if (prop === "data") {
+        input[prop] = value;
+      }
     });
-  }
-  return isValid;
+  };
+  fIp.props = {
+    id: fIp.id,
+    name: fIp.name,
+    type: fIp.type,
+    value: fIp.value,
+    checked: fIp.checked,
+    multiple: fIp.multiple,
+    placeholder: fIp.placeholder,
+    required: fIp.required,
+    onChange: fIp.onChange
+  } as InputProps;
+
+  const { name, errorMessage } = fIp;
+  // we save the error message and validation
+  const ev = store.h.ev[name] || {};
+  store.h.ev[name] = {
+    e: ev.e ?? errorMessage,
+    v: ev.v ?? fIp.validation,
+    // count inputs name
+    c: ev.c ? ev.c + 1 : 1
+  };
+  entry[objKey] = fIp;
+  // Reset errorMessage
+  entry[objKey].errorMessage = errorMessage instanceof Object ? {} : undefined;
+
+  return entry[objKey].valid;
 };
 
-// Validate the state
-const validateState = (data: ObjectInputs<string>): ValidateState => {
+export const finalizeInputs = (initialState: Unknown, config: InputConfig) => {
+  const inf = {} as ObjectInputs<string>;
+  const st = createStore({}) as unknown as InputStore;
   let isValid = true;
-  let invalidKey = null;
-  for (const formKey in data) {
-    isValid = isValid && !data[formKey].validating && data[formKey].valid;
-    if (!isValid) {
-      invalidKey = formKey;
-      break;
+  st.h = Helper();
+  if (matchType(initialState, "string")) {
+    createInput(inf, st, initialState, initialState);
+  } else {
+    for (const stateKey in initialState) {
+      const iv = createInput(inf, st, initialState[stateKey], stateKey);
+      isValid = isValid && iv;
     }
   }
-  return { isValid, invalidKey };
+  st.set((ref) => {
+    ref.i = inf;
+    ref.inv = isValid;
+    ref.iv = isValid;
+    ref.c = config;
+  });
+  return { st, inf };
 };
+
+const touchInput = (store: InputStore) => {
+  const data = store.get("i");
+  const ik = validateState(data).ik;
+  if (ik) {
+    const input = data[ik] as Input & GetValue;
+    const { em } = validate(store, data, ik, input.g(input.value, data));
+    store.set((ref) => tem(ref.i, ik, false, em));
+  }
+};
+
 // T transform array to object and vice versa
 const transformToArray = (state: ObjectInputs<string>) => {
   const result: Input[] = [];
@@ -165,50 +182,21 @@ const transformToArray = (state: ObjectInputs<string>) => {
   return result;
 };
 
-const cleanFiles = (files: ParsedFile[]) => {
-  // Set type to any to break the contract type
-  return files.map((f: any) => {
-    delete f.selfRemove;
-    delete f.selfUpdate;
-    delete f.key;
-    return f;
-  });
-};
-
-// E extract values from state
-const extractValues = (state: ObjectInputs<string>) => {
-  const result = {} as { [k in string]: Unknown };
-  for (const key in state) {
-    const K = state[key].name;
-    if (state[key].type === "radio") {
-      if (state[key].checked) {
-        result[K] = state[key].value;
-      } else if (!result[K]) {
-        result[K] = "";
-      }
-    } else if (state[key].type === "checkbox") {
-      if (!result[K]) {
-        result[K] = [];
-      }
-      if (state[key].checked) {
-        result[K].push(state[key].value);
-      }
-    } else {
-      result[K] =
-        state[key].type === "file"
-          ? cleanFiles(state[key].files)
-          : parseValue(state[key], state[key].value);
+export const getInput = (
+  store: InputStore,
+  name: string
+): { r: Input[]; o: string } => {
+  const entry = store.get("i");
+  const r: Input[] = [];
+  // o = objkey
+  let o = "";
+  keys(entry).forEach((k) => {
+    if (entry[k].name === name) {
+      r.push(entry[k]);
+      o = k;
     }
-  }
-  return result;
+  });
+  return { r, o };
 };
 
-export {
-  commonProps,
-  validateState,
-  syncRCAndValid,
-  transformToArray,
-  extractValues,
-  parseValue,
-  touchInput
-};
+export { transformToArray, touchInput };

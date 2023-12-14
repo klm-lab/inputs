@@ -38,17 +38,25 @@ interface CustomAsyncValidationType {
 }
 
 type ValidateInputParams = {
-  helper: Helper;
-  entry?: ObjectInputs<string>;
-  input: Input;
-  target: string;
-  value: Unknown;
-  omittedRules?: (keyof ValidationStateType)[];
-  store?: InputStore;
-  asyncCallback?: AsyncCallback;
+  // entry of inputs
+  i?: ObjectInputs<string>;
+  // input
+  ip: Input;
+  // objkey
+  ok: string;
+  // value
+  va: Unknown;
+  // omittedRules
+  omr?: (keyof ValidationStateType)[];
+  // store
+  st: InputStore;
 };
 type ValidateInput = (params: ValidateInputParams) => ValidationResult;
-type ValidationResult = { em: Unknown; valid: boolean };
+type ValidationResult = {
+  em: Unknown;
+  // valid
+  v: boolean;
+};
 type AsyncValidateInput = (params: ValidateInputParams) => void;
 
 interface ValidationStateType {
@@ -79,13 +87,15 @@ interface InternalInput {
   value?: Unknown;
   checked?: boolean;
   multiple?: boolean;
-  mergeChanges?: boolean;
+  merge?: boolean;
   valid?: boolean;
   touched?: boolean;
   placeholder?: Unknown;
   errorMessage?: Unknown;
   validation?: ValidationStateType;
-  extraData?: Unknown;
+  data?: Unknown;
+
+  afterChange?(params: { value: Unknown; input: Input }): void;
 }
 
 interface ParsedFile {
@@ -93,8 +103,8 @@ interface ParsedFile {
   key: string;
   url: string;
   loaded: boolean;
-  gettingFile: boolean;
-  fileUpdate: Unknown;
+  fetching: boolean;
+  update: Unknown;
 
   selfRemove(): void;
 
@@ -104,15 +114,20 @@ interface ParsedFile {
 }
 
 type ValidateState = {
-  isValid: boolean;
-  invalidKey: string | null;
+  // invalid
+  iv: boolean;
+  // invalid key
+  ik: string | null;
 };
 
 // FOr some reason, Build-in Required doesn't work
 interface InputProps {
   id: string;
+  required: boolean;
   accept: string;
   name: string;
+  min: number | string;
+  max: number | string;
   type: HTMLInputTypeAttribute;
   value: Unknown;
   checked: boolean;
@@ -126,28 +141,26 @@ interface Input extends InputProps {
   key: string;
   label: Unknown;
   files: ParsedFile[];
-  mergeChanges: boolean;
+  merge: boolean;
   errorMessage: Unknown;
   validation: Required<ValidationStateType>;
   validating: boolean;
-  asyncValidationFailed: boolean;
+  validationFailed: boolean;
   valid: boolean;
   touched: boolean;
 
-  // initValue(value: Unknown, initFileConfig?: FileConfig): void;
-
-  set<P extends "extraData" | "type" | "value">(
+  set<P extends "data" | "type" | "value">(
     prop: P,
     value: Input[P],
     fileConfig?: FileConfig
   ): void;
 
   props: InputProps;
-  extraData: Unknown;
+  data: Unknown;
 }
 
 interface FileConfig {
-  getBlob?(url: string): Blob | Promise<Blob>;
+  getBlob?(url: string): Unknown;
 }
 
 type CreateObjectInputs<K> = {
@@ -162,16 +175,11 @@ type ArrayInputs = Input[];
 type CreateArrayInputs = (string | InternalInput)[];
 
 type ObjStateOutput<I> = [{ [k in keyof I & string]: Input } & IsValid, Form];
-type StringStateOutput = [Input & IsValid, Form];
 type ArrayStateOutput = [ArrayInputs & IsValid, Form];
-
-type StateType = "object" | "array";
 
 type InputConfig = {
   asyncDelay?: number;
   persistID?: string;
-  trackID?: IDTrackUtil<string>;
-  lockValuesOnError?: boolean;
 };
 
 interface IsValid {
@@ -179,9 +187,9 @@ interface IsValid {
 }
 
 interface CommonForm {
-  toObject(): ObjectInputs<string> & IsValid;
-
-  toArray(): ArrayInputs & IsValid;
+  // toObject(): ObjectInputs<string> & IsValid;
+  //
+  // toArray(): ArrayInputs & IsValid;
 
   reset(): void;
 
@@ -191,9 +199,7 @@ interface CommonForm {
 
   showError(): void;
 
-  getInputById(id: string): Input;
-
-  getInputsByName(name: string): Input[];
+  get(name: string): Input[];
 }
 
 interface ForEachCallback {
@@ -205,95 +211,129 @@ interface MapCallback {
 }
 
 interface Form extends CommonForm {
-  length: number;
+  getValues(): Unknown;
 
-  getValues(name?: string): Unknown;
+  onSubmit(event: Event): void;
+}
+type IPS = {
+  i: ObjectInputs<string>;
+  iv: boolean;
+  // helper: Helper;
+  inv: boolean;
+  // asyncDelay: number;
+  c: InputConfig;
+};
+type InputStore = StoreType<IPS> & { h: HelperType; fc: FileConfig };
+type AsyncValidationParams = {
+  // valid
+  v?: boolean;
+  em?: Unknown;
+  // objkey
+  ok: string;
+  //store
+  st: InputStore;
+  // failed
+  f?: boolean;
+};
+
+interface CompForm extends CommonForm {
+  getValues(): Unknown;
 
   onSubmit(event: Event): void;
 }
 
-interface IDTrackUtil<I> extends CommonForm {
-  ID: I;
-  length: number;
-
-  isValid(): boolean;
-
-  getValues(name?: string): Unknown;
-
-  // Todo, typing result
-  // useInputs(): Unknown;
-  useValues(name?: string): Unknown;
+interface Computed {
+  // store
+  st: InputStore;
+  cp: CompForm;
+  // useValues
+  uv(): Unknown;
+  // is valid
+  iv(): boolean;
+  // array
+  a: boolean;
 }
 
-interface TrackUtil extends CommonForm {
+interface HelperType {
+  key(): string;
+
+  a: { [k in string]: Unknown };
+  ev: { [k in string]: { e: Unknown; v: ValidationStateType; c: number } };
+}
+
+interface InputsHook {
+  // External declaration support (Dynamic infer)
+  <I>(
+    initialState: I extends Array<Unknown>
+      ? CreateArrayInputs | I
+      : CreateObjectInputs<keyof I> | I,
+    config?: InputConfig
+  ): I extends string
+    ? ObjStateOutput<CreateObjectInputs<I>>
+    : I extends Array<Unknown>
+    ? ArrayStateOutput
+    : ObjStateOutput<I>;
+
+  // Internal declaration object
+  <I extends CreateObjectInputs<keyof I>>(
+    initialState: CreateObjectInputs<keyof I> | I,
+    config?: InputConfig
+  ): ObjStateOutput<I>;
+
+  // Internal declaration Array
+  <I extends CreateArrayInputs>(
+    initialState: CreateArrayInputs | I,
+    config?: InputConfig
+  ): ArrayStateOutput;
+
+  // string
+  <I extends string>(
+    initialState: I,
+    config?: InputConfig
+  ): ObjStateOutput<CreateObjectInputs<I>>;
+}
+
+interface Inputs<I> extends CompForm {
+  (): I extends string
+    ? ObjStateOutput<CreateObjectInputs<I>>
+    : I extends Array<Unknown>
+    ? ArrayStateOutput
+    : ObjStateOutput<I>;
   isValid(): boolean;
-
-  getValues(): Unknown;
-
-  length(): number;
-
   useValues(): Unknown;
 }
 
-type InputStore = StoreType<{
-  entry: ObjectInputs<string>;
-  isValid: boolean;
-  helper: Helper;
-  initialValid: boolean;
-  // asyncDelay: number;
-  config: InputConfig;
-}>;
-type AsyncValidationParams = {
-  valid: boolean;
-  em?: Unknown;
-  input: Input;
-  store: InputStore;
-  failed?: boolean;
-  helper: Helper;
-};
-type AsyncCallback = (params: AsyncValidationParams) => void;
-
-interface CompForm extends CommonForm {
-  length: number;
-
-  getValues(name?: string): Unknown;
-
-  onSubmit(event: Event): void;
-
-  showError(): void;
+interface TrackInputs {
+  <I>(
+    initialState: I extends Array<Unknown>
+      ? CreateArrayInputs | I
+      : CreateObjectInputs<keyof I> | I,
+    config?: InputConfig
+  ): Inputs<I>;
 }
 
-interface ComputeOnceOut {
-  store: InputStore;
-  CompForm: CompForm;
-}
-
-interface Helper {
-  key(): string;
-  em: { [k in string]: Unknown };
-  a: { [k in string]: Unknown };
+interface GetValue {
+  g(oldValue: Unknown, data?: ObjectInputs<string>): Unknown;
 }
 
 export type {
-  Helper,
-  TrackUtil,
+  InputsHook,
+  GetValue,
+  TrackInputs,
+  HelperType,
   ObjStateOutput,
   ArrayStateOutput,
-  StringStateOutput,
   InternalInput,
   Unknown,
   ValidationStateType,
-  StateType,
   CustomValidationType,
   Form,
   InputConfig,
   Input,
-  IDTrackUtil,
   InputStore,
-  AsyncCallback,
   AsyncValidationParams,
   ObjectInputs,
-  ComputeOnceOut,
+  Computed,
   ParsedFile,
   FileConfig,
   ForEachCallback,
@@ -308,5 +348,6 @@ export type {
   AsyncValidateInput,
   ValidateInputParams,
   CustomAsyncValidationType,
-  ValidationResult
+  ValidationResult,
+  IPS
 };

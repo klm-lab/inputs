@@ -1,15 +1,15 @@
-import type { ComputeOnceOut, Helper } from "../types";
+import { Computed, HelperType, Unknown } from "../types";
 
 let key = -1;
-const He = (): Helper => {
-  // error message
-  const em = {};
+export const Helper = (): HelperType => {
   // async delay
   const a = {};
+  // errorMessage, validation and name count
+  const ev = {};
 
   return {
-    em,
     a,
+    ev,
     key: () => {
       key++;
       return `*_*_${key}`;
@@ -17,8 +17,7 @@ const He = (): Helper => {
   };
 };
 
-const persist = {} as { [k in string]: ComputeOnceOut };
+export const persist = {} as { [k in string]: Computed };
 
-const O = Object;
-
-export { persist, He, O };
+export const keys = Object.keys;
+export const matchType = (v: Unknown, type: string) => typeof v === type;

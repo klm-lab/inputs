@@ -1,26 +1,28 @@
-import { ValidateInput, ValidateInputParams } from "../../types";
+import { Unknown, ValidateInput } from "../../types";
 import { validate } from "./index";
+import { getInput } from "../../util";
 
-export const match = (inputId: string): ValidateInput => {
-  return ({ helper, entry, target, value }) => {
-    let v = { valid: true, em: helper.em[target] };
-    if (!entry![inputId]) {
-      throw Error("Missing input id");
+export const match = (name: string, em?: Unknown): ValidateInput => {
+  return ({ i, ok, st, va }) => {
+    const key = getInput(st, name).o;
+    if (!key) {
+      return { v: true, em: undefined };
     }
-    if (!entry![inputId].validation.match) {
-      entry![inputId].validation.match = ({
-        entry,
-        value: V
-      }: ValidateInputParams) => {
-        const valid = entry![target].value === V;
-        entry![target].valid = valid;
-        return { valid, em: helper.em[inputId] };
-      };
-    }
-    v = validate(helper, entry!, inputId, value, ["match"]);
-    v.em = v.valid ? helper.em[target] : v.em;
-    v.valid = v.valid && value === entry![inputId].value;
-    entry![inputId].valid = v.valid;
-    return { valid: v.valid, em: v.em };
+    // if (!entry![inputId].validation.match) {
+    //   entry![inputId].validation.match = ({
+    //     entry,
+    //     value: V
+    //   }: ValidateInputParams) => {
+    //     const valid = entry![target].value === V;
+    //     entry![target].valid = valid;
+    //     return { valid, em: helper.em[inputId] };
+    //   };
+    // }
+    const v = validate(st, i!, key, va, ["match"], ok);
+    v.em = !v.em ? em : v.em;
+    v.v = v.v && va === i![key].value;
+    i![key].valid = v.v;
+    i![key].errorMessage = v.v ? undefined : i![key].errorMessage;
+    return { v: v.v, em: v.em };
   };
 };

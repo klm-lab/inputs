@@ -4,18 +4,18 @@ export const startsWith = (
   startsWith: Unknown,
   em?: Unknown
 ): ValidateInput => {
-  return ({ value }) => {
+  return ({ va }) => {
     return {
-      valid: value.length > 0 && value.startsWith(startsWith),
+      v: va.startsWith(startsWith),
       em
     };
   };
 };
 
 export const endsWith = (endsWith: Unknown, em?: Unknown): ValidateInput => {
-  return ({ value }) => {
+  return ({ va }) => {
     return {
-      valid: value.length > 0 && value.endsWith(endsWith),
+      v: va.endsWith(endsWith),
       em
     };
   };
