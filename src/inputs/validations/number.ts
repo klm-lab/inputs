@@ -1,19 +1,19 @@
 import { Unknown, ValidateInput } from "../../types";
 
 export const number = (em?: Unknown): ValidateInput => {
-  return ({ value }) => {
-    return { valid: !isNaN(value), em };
+  return ({ va }) => {
+    return { v: !!va && !isNaN(va), em };
   };
 };
 
 export const min = (min: number, em?: Unknown): ValidateInput => {
-  return ({ value }) => {
-    return { valid: Number(value) >= min, em };
+  return ({ va }) => {
+    return { v: Number(va) >= min, em };
   };
 };
 
 export const max = (max: number, em?: Unknown): ValidateInput => {
-  return ({ value }) => {
-    return { valid: Number(value) <= max, em };
+  return ({ va }) => {
+    return { v: Number(va) <= max, em };
   };
 };

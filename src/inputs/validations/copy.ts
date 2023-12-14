@@ -1,18 +1,23 @@
 import { ValidateInput, ValidationStateType } from "../../types";
 import { validate } from "./index";
+import { getInput } from "../../util";
 
 export const copy = (
-  inputId: string,
+  name: string,
   omittedRules?: (keyof ValidationStateType)[]
 ): ValidateInput => {
-  return ({ helper, entry, target, value, omittedRules: or }) => {
-    if (!entry![inputId]) {
-      throw Error("Missing input id");
-    }
-    const v = validate(helper, entry!, inputId, value, omittedRules ?? or);
+  return ({ i, ok, st, va, omr }) => {
+    const v = validate(
+      st,
+      i!,
+      getInput(st, name).o,
+      va,
+      omittedRules ?? omr,
+      ok
+    );
     return {
-      valid: v.valid,
-      em: v.em ?? helper.em[target]
+      v: v.v,
+      em: v.em
     };
   };
 };

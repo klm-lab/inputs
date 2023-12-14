@@ -1,91 +1,42 @@
-import { computeOnce } from "../index";
+import { compute } from "../index";
 import type {
+  Computed,
   InputConfig,
   InputsHook,
   IsValid,
-  ObjectInputs,
-  StateType,
+  TrackInputs,
   Unknown
 } from "../../types";
 import { useMemo } from "react";
 import { transformToArray } from "../../util";
 
-const parsedInputs = (
-  initialState: Unknown,
-  type: StateType,
-  config: InputConfig,
-  // hookType: HookType,
-  selective?: string
-) => {
-  const { store, compForm } = useMemo(
-    () => computeOnce(initialState, type, config),
-    []
-  );
-
-  const { entry, isValid } = store();
-
-  const inputs = selective ? entry[selective] : entry;
-
-  const parsedInputs =
-    type === "object"
-      ? inputs
-      : transformToArray(inputs as ObjectInputs<string>);
-  (parsedInputs as typeof parsedInputs & IsValid).isValid = isValid;
-  return [parsedInputs, compForm];
+const next = (computed: Computed) => {
+  const { st, cp, a } = computed;
+  const { i, iv } = st();
+  const parsedInputs = a ? transformToArray(i) : i;
+  (parsedInputs as typeof parsedInputs & IsValid).isValid = iv;
+  return [parsedInputs, cp];
 };
-
-// // External declaration support (Dynamic infer)
-// function useInputs<I>(
-//   initialState: I extends Array<Unknown>
-//     ? CreateArrayInputs | I
-//     : CreateObjectInputs<keyof I> | I,
-//   config?: InputConfig
-// ): I extends Array<Unknown> ? ArrayStateOutput : ObjStateOutput<I>;
-// // Internal declaration object
-// function useInputs<I extends CreateObjectInputs<keyof I>>(
-//   initialState: CreateObjectInputs<keyof I> | I,
-//   config?: InputConfig
-// ): ObjStateOutput<I>;
-// // Internal declaration Array
-// function useInputs<I extends CreateArrayInputs>(
-//   initialState: CreateArrayInputs | I,
-//   config?: InputConfig
-// ): ArrayStateOutput;
-// // string
-// function useInputs(
-//   initialState: string,
-//   config?: InputConfig
-// ): StringStateOutput;
 
 const useInputs: InputsHook = (
   initialState: Unknown,
-  config = {}
-  //  type
+  config: InputConfig = {}
 ): Unknown => {
-  if (initialState instanceof Array) {
-    return parsedInputs(
-      initialState.map((entry, i) =>
-        typeof entry === "string"
-          ? { id: entry }
-          : entry.id
-          ? entry
-          : { id: `input_${i}`, ...entry }
-      ),
-      "array",
-      config
-      //  type
-    );
+  return next(useMemo(() => compute(initialState, config), []));
+};
+const trackInputs: TrackInputs = (
+  initialState: Unknown,
+  config: InputConfig = {}
+): Unknown => {
+  const computed = compute(initialState, config);
+  const h = () => next(computed);
+  const { cp, uv, iv } = computed;
+  for (const key in cp) {
+    (h as Unknown)[key] = (cp as Unknown)[key];
   }
-  if (typeof initialState === "string") {
-    return parsedInputs(
-      { [initialState]: {} },
-      "object",
-      config,
-      // type,
-      initialState
-    );
-  }
-  return parsedInputs(initialState, "object", config);
+  (h as Unknown).useValues = uv;
+  (h as Unknown).isValid = iv;
+  return h;
 };
 
-export { useInputs };
+export { useInputs, trackInputs };

@@ -1,59 +1,33 @@
-import type {
-  ComputeOnceOut,
+import {
+  Computed,
   ForEachCallback,
-  Input,
   InputConfig,
-  IsValid,
   MapCallback,
-  ObjectInputs,
-  StateType,
   Unknown
 } from "../types";
 import {
-  extractValues,
   finalizeInputs,
+  getInput,
   touchInput,
   transformToArray
 } from "../util";
-import { O, persist } from "../util/helper";
-import { validateState } from "./validations";
+import { persist } from "../util/helper";
+import { extractValues } from "./handlers/values";
 
-export const computeOnce = (
-  initialState: Unknown,
-  type: StateType,
-  config: InputConfig
-) => {
+export const compute = (initialState: Unknown, config: InputConfig) => {
   if (config.persistID && persist[config.persistID]) {
     return persist[config.persistID];
   }
-  const { store, helper, initialForm } = finalizeInputs(
-    initialState,
-    type,
-    config
-  );
+  const { st, inf } = finalizeInputs(initialState, config);
 
-  const getValues = (name?: string) => {
-    if (
-      config.lockValuesOnError &&
-      !validateState(store.get("entry")).isValid
-    ) {
-      return null;
-    }
-    const values = extractValues(store.get("entry"));
-    return name ? values[name] : values;
-  };
-
-  const showError = () => {
-    touchInput(store, helper);
-  };
   const onSubmit = (event: Event) => {
     event.preventDefault();
     event.stopPropagation();
-    showError();
+    touchInput(st);
   };
 
   const loop = (callback: ForEachCallback | MapCallback) => {
-    const entry = store.get("entry");
+    const entry = st.get("i");
     const v = {
       i: 0,
       ar: transformToArray(entry),
@@ -66,81 +40,45 @@ export const computeOnce = (
     return v.mapR;
   };
 
-  const toArray = (): Input[] & IsValid => {
-    const r = transformToArray(store.get("entry")) as Input[] & IsValid;
-    r.isValid = store.get("isValid");
-    return r;
-  };
-  const toObject = (): ObjectInputs<string> & IsValid => {
-    const r = store.get("entry") as ObjectInputs<string> & IsValid;
-    r.isValid = store.get("isValid");
-    return r;
-  };
+  // const toArray = (): Input[] & IsValid => {
+  //   const r = loop((i) => i) as Input[] & IsValid;
+  //   r.isValid = store.get("iv");
+  //   return r;
+  // };
+  // const toObject = (): ObjectInputs<string> & IsValid => {
+  //   const r = store.get("i") as ObjectInputs<string> & IsValid;
+  //   r.isValid = store.get("iv");
+  //   return r;
+  // };
   const reset = () => {
-    store.set((ref) => {
-      const entry = ref.entry;
-      const rForm: ObjectInputs<string> = {};
-      O.keys(initialForm).forEach((k) => {
-        rForm[k] = {
-          ...initialForm[k],
-          extraData: entry[k].extraData
+    st.set((ref) => {
+      for (const key in ref.i) {
+        ref.i[key] = {
+          ...inf[key],
+          data: ref.i[key].data
         };
-      });
-      ref.entry = rForm;
-      ref.isValid = store.get("initialValid");
+      }
+      ref.iv = st.get("inv");
     });
   };
 
-  const getInputById = (id: string) => {
-    return store.get(`entry.${id}`);
-  };
-
-  const getInputsByName = (name: string) => {
-    const entry = store.get("entry");
-    const r: Input[] = [];
-    O.keys(entry).forEach((k) => {
-      entry[k].name === name && r.push(entry[k]);
-    });
-    return r;
-  };
-
-  const length = O.keys(initialForm).length;
-
-  const result: ComputeOnceOut = {
-    compForm: {
+  const result: Computed = {
+    cp: {
       reset,
-      getValues,
-      toArray,
-      toObject,
+      getValues: () => extractValues(st.get("i")),
+      // toArray,
+      // toObject,
       forEach: loop,
       map: loop,
-      length,
       onSubmit,
-      showError,
-      getInputById,
-      getInputsByName
+      showError: () => touchInput(st),
+      get: (name: string) => getInput(st, name).r
     },
-    store
+    a: initialState instanceof Array,
+    st: st,
+    uv: () => extractValues(st("i")),
+    iv: () => st.get("iv")
   };
-
-  if (config.trackID && config.trackID.ID) {
-    config.trackID.getValues = getValues;
-    config.trackID.showError = showError;
-    config.trackID.getInputById = getInputById;
-    config.trackID.getInputsByName = getInputsByName;
-    config.trackID.toArray = toArray;
-    config.trackID.toObject = toObject;
-    config.trackID.forEach = loop;
-    config.trackID.map = loop;
-    config.trackID.reset = reset;
-    config.trackID.isValid = () => store.get("isValid");
-    config.trackID.length = length;
-    config.trackID.useValues = (name?: string) => {
-      const entry = store("entry");
-      const values = extractValues(entry);
-      return name ? values[name] : values;
-    };
-  }
 
   if (config.persistID) {
     persist[config.persistID] = result;
