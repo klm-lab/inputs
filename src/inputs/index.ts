@@ -1,24 +1,23 @@
 import {
   Computed,
-  ForEachCallback,
+  type Input,
   InputConfig,
-  MapCallback,
+  EachCallback,
   Unknown
 } from "../types";
-import {
-  finalizeInputs,
-  getInput,
-  touchInput,
-  transformToArray
-} from "../util";
+import { finalizeInputs, touchInput, transformToArray } from "../util";
 import { persist } from "../util/helper";
 import { extractValues } from "./handlers/values";
 
-export const compute = (initialState: Unknown, config: InputConfig) => {
-  if (config.pid && persist[config.pid]) {
-    return persist[config.pid];
+export const createInputs = (initialState: Unknown, config: InputConfig) => {
+  // pid => persistID to persist data on component unmount
+  const pid = config.pid;
+  if (pid && persist[pid]) {
+    return persist[pid];
   }
-  const { st, inf } = finalizeInputs(initialState, config);
+  // st => store
+  // ip => initial Inputs
+  const { st, ip } = finalizeInputs(initialState, config);
 
   const onSubmit = (event: Event) => {
     event.preventDefault();
@@ -26,40 +25,35 @@ export const compute = (initialState: Unknown, config: InputConfig) => {
     touchInput(st);
   };
 
-  const loop = (callback: ForEachCallback | MapCallback) => {
+  const each = (callback: EachCallback) => {
     const entry = st.get("i");
     const v = {
+      // index
       i: 0,
-      ar: transformToArray(entry),
-      mapR: [] as Unknown[]
+      // Inputs array
+      a: transformToArray(entry),
+      // each result
+      l: [] as Unknown[]
     };
     for (const key in entry) {
-      v.mapR.push(callback(entry[key], v.i, v.ar));
+      v.l.push(callback(entry[key], v.i, v.a));
       v.i++;
     }
-    return v.mapR;
+    return v.l;
   };
 
-  // const toArray = (): Input[] & IsValid => {
-  //   const r = loop((i) => i) as Input[] & IsValid;
-  //   r.isValid = store.get("iv");
-  //   return r;
-  // };
-  // const toObject = (): ObjectInputs<string> & IsValid => {
-  //   const r = store.get("i") as ObjectInputs<string> & IsValid;
-  //   r.isValid = store.get("iv");
-  //   return r;
-  // };
   const reset = () => {
+    // clear possibly checkbox value
+    // st.n => contains all inputs names
+    // st.ev => contains all inputs extra data and validation like total of inputs, selected inputs etc...
+    st.n.forEach((n: string) => st.ev[n].s.clear());
+    // reset with initial value
     st.set((ref) => {
-      for (const key in ref.i) {
-        ref.i[key] = {
-          ...inf[key],
-          data: ref.i[key].data
-        };
-        st.ev[inf[key].name].s.clear();
-      }
+      // ref.i => is the inputs
+      ref.i = ip;
+      // ref.iv => is initial valid state
       ref.iv = st.get("inv");
+      // ref.t => inputs is touched
       ref.t = false;
     });
   };
@@ -68,22 +62,27 @@ export const compute = (initialState: Unknown, config: InputConfig) => {
     cp: {
       reset,
       getValues: () => extractValues(st.get("i")),
-      // toArray,
-      // toObject,
-      forEach: loop,
-      map: loop,
+      each,
       onSubmit,
       showError: () => touchInput(st),
-      get: (name: string) => getInput(st, name).r
+      get: (name: string) => {
+        const r: Input[] = [];
+        st.ev[name].o.forEach((k) => {
+          r.push(st.get(`i.${k}`));
+        });
+        return r;
+      }
     },
     a: initialState instanceof Array,
-    st: st,
+    st,
+    // useValues
     uv: () => extractValues(st("i")),
+    // isValid
     iv: () => st.get("iv")
   };
 
-  if (config.pid) {
-    persist[config.pid] = result;
+  if (pid) {
+    persist[pid] = result;
   }
   return result;
 };

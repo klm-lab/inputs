@@ -7,7 +7,7 @@ import {
   ValidateState,
   ValidationResult
 } from "../../types";
-import { keys } from "../../util/helper";
+import { keys, newSet } from "../../util/helper";
 
 const validate = (
   st: InputStore,
@@ -18,14 +18,14 @@ const validate = (
   o = ok
 ): ValidationResult => {
   const ip: Input = i[ok];
-  const rules = st.ev[ip?.name].v;
+  const rules = st.ev[ip.name].v;
   let em: Unknown = null;
   if (!rules) {
     return em;
   }
   const params = { i, st, ip, ok: o, va, omr } as ValidateInputParams;
 
-  new Set(keys(rules)).forEach((r: Unknown) => {
+  newSet(keys(rules)).forEach((r: Unknown) => {
     if (em) {
       return;
     }

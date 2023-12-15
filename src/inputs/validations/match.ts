@@ -1,10 +1,9 @@
 import { Unknown, ValidateInput } from "../../types";
 import { validate } from "./index";
-import { getInput } from "../../util";
 
 export const match = (name: string, em?: Unknown): ValidateInput => {
   return ({ i, ok, st, va }) => {
-    const key = getInput(st, name).o;
+    const key = st.ev[name].k;
 
     if (!key) {
       return null;
