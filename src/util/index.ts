@@ -1,387 +1,192 @@
 import type {
-  CreateObjectInputs,
-  Helper,
+  GetValue,
   Input,
+  InputConfig,
   InputProps,
   InputStore,
-  InternalInput,
-  MatchResultType,
-  MergeType,
   ObjectInputs,
-  ParsedFile,
-  Unknown,
-  ValidateState,
-  ValidationStateType
+  Unknown
 } from "../types";
-import { deepMatch, parseCopy, validate } from "./validation";
-import { createCheckboxValue } from "../inputs/handlers/checkbox";
-import { radioIsChecked } from "../inputs/handlers/radio";
-const O = Object;
+import { validate, validateState } from "../inputs/validations";
+import {
+  CHECKBOX,
+  FILE,
+  newKey,
+  keys,
+  matchType,
+  RADIO,
+  SELECT,
+  STRING
+} from "./helper";
+import { createStore } from "aio-store/react";
+import { initValue, nextChange, tem } from "../inputs/handlers/changes";
+import { cleanFiles, createFiles } from "../inputs/handlers/files";
+import { createSelectFiles } from "../inputs/handlers/select";
 
-const parseValue = (input: Input, value: any) =>
-  input.type === "number" || input.validation?.number
-    ? !isNaN(Number(value))
-      ? Number(value)
-      : value
-    : value;
-
-const initValid = (entry: InternalInput) => {
-  const validation = entry.validation || {};
-  const isValid = !O.keys(validation).length;
-  // return !["", 0, null, undefined].includes(entry.value);
-  // return isValid ? !!entry.checked : false;
-  return entry.checked ? true : isValid;
-};
-
-const lockProps = (entry: Input) => {
-  return {
-    id: entry.id,
-    name: entry.name,
-    type: entry.type,
-    value: entry.value,
-    checked: entry.checked,
-    multiple: entry.multiple,
-    placeholder: entry.placeholder
-  } as InputProps;
-};
-
-// Spread common props
-const commonProps = (entry: InternalInput, id: string) => {
-  const defaultID = entry.id ?? id;
-  return {
-    id: defaultID,
-    name: entry.name ?? defaultID,
-    label: entry.label ?? entry.name ?? defaultID,
-    type: entry.type ?? "text",
+const createInput = (
+  entry: Unknown,
+  store: InputStore,
+  inp: Unknown,
+  objKey: string
+) => {
+  const key = newKey();
+  const isString = matchType(inp, STRING);
+  const { id, multiple, type, checked, validation = {} } = inp;
+  const fIp = {
+    id: id ?? key,
+    name: isString ? inp : key,
     value:
-      entry.type === "select" && entry.multiple
+      type === SELECT && multiple
         ? []
-        : ["radio", "checkbox"].includes(entry.type as string)
-        ? entry.label ?? defaultID
+        : [RADIO, CHECKBOX].includes(type)
+        ? objKey
         : "",
+    files: [],
     checked: false,
-    valid: initValid(entry),
-    touched: false,
-    placeholder: entry.placeholder ?? entry.name ?? defaultID,
-    errorMessage: undefined,
-    validating: false,
-    extraData: null
+    valid: checked ? true : !keys(validation).length,
+    ...(isString ? {} : inp),
+    key
+  } as Input & GetValue;
+
+  fIp.g = function (oldValue, data) {
+    const { type, value, files, checked, name } = this;
+    const ev = store.ev[name];
+    if (type === FILE) {
+      return cleanFiles(files);
+    }
+    if (type === RADIO) {
+      return data ? "" : checked ? value : oldValue ?? "";
+    }
+    if (type === CHECKBOX) {
+      if (data || ev.c > 1) {
+        return [...ev.s];
+      }
+      return checked;
+    }
+    return value;
   };
-};
 
-const setTrackingMatching = (
-  helper: Helper,
-  target: string,
-  matchKey: string[]
-) => {
-  if (helper.tm[target]) {
-    return [...new Set([...helper.tm[target], ...matchKey])];
-  } else {
-    return matchKey;
-  }
-};
+  fIp.onChange = (value) => {
+    const isEvent = matchType(value.preventDefault, "function");
+    const entry = store.get("i");
+    const input = entry[objKey];
+    const { type, placeholder, multiple } = input;
+    const targetValue = isEvent
+      ? value.target.value || value.nativeEvent.text || ""
+      : value;
 
-/*
- * Loop validation and merge.
- * Merge help preserve value that present in the state and not in the data
- * */
-const merge = (
-  state: ValidationStateType,
-  data: ValidationStateType,
-  mergeProps?: MergeType
-) => {
-  const { omit, keyPath } = mergeProps || {
-    omit: new Set<keyof ValidationStateType>()
-  };
-  for (const key in data) {
-    // We key as keyof ValidationStateType
-    // because we don't want to create an unnecessary variable because of typescript
-
-    // We give priority to the data
-    if (keyPath === "copy") {
-      if (
-        state[key as keyof ValidationStateType]?.constructor.name ===
-          "Object" &&
-        data[key as keyof ValidationStateType]?.constructor.name === "Object"
-      ) {
-        state[key as keyof ValidationStateType] = {
-          ...state[key as keyof ValidationStateType],
-          ...data[key as keyof ValidationStateType]
-        };
-      } else {
-        state[key as keyof ValidationStateType] =
-          data[key as keyof ValidationStateType];
-      }
-    }
-    // We give priority to the last matched result
-    if (keyPath === "match" && state[key as keyof ValidationStateType]) {
-      if (
-        state[key as keyof ValidationStateType]?.constructor.name ===
-          "Object" &&
-        data[key as keyof ValidationStateType]?.constructor.name === "Object"
-      ) {
-        state[key as keyof ValidationStateType] = {
-          value: state[key as keyof ValidationStateType].value,
-          message:
-            data[key as keyof ValidationStateType].message ??
-            state[key as keyof ValidationStateType].message
-        };
-      }
-      if (
-        state[key as keyof ValidationStateType]?.constructor.name !==
-          "Object" &&
-        data[key as keyof ValidationStateType]?.constructor.name === "Object"
-      ) {
-        state[key as keyof ValidationStateType] = {
-          value: state[key as keyof ValidationStateType],
-          message: data[key as keyof ValidationStateType].message
-        };
-      }
-    }
-  }
-  omit?.forEach((k: keyof ValidationStateType) => {
-    delete state[k];
-  });
-
-  return state;
-};
-
-// Match and copy input validation
-const mcv = (
-  helper: Helper,
-  state: CreateObjectInputs<string>,
-  stateKey: string,
-  matchOrCopyKey: string,
-  keyPath: keyof ValidationStateType
-) => {
-  let matchResult = {} as MatchResultType;
-  /*
-   * We check if the matched input also match someone until find the last one who doesn't have a match property
-   * and use last not matched validation to match all input in the hierarchy.
-   * We add trackMatching for validation tool. See validate function in validation folder
-   * */
-  try {
-    matchResult = deepMatch(helper, state, stateKey, matchOrCopyKey, keyPath);
-  } catch (_) {
-    throw Error(
-      "It seems that an ID is missing or we have infinite match here. Please make sure that the copied or matched input has an id and the last matched or copied input does not match or copy anyone"
-    );
-  }
-
-  /*
-   * Mmv is merge matched validation
-   * We merge resultValidation with all matched validation
-   * */
-  let mmv: ValidationStateType = {};
-
-  matchResult.mk.forEach((v) => {
-    mmv = merge(mmv, helper.s[v].validation as ValidationStateType, {
-      keyPath
-    });
-
-    // We updated every matched input found with the appropriate validation
-    state[v].validation = {
-      ...merge(
-        { ...matchResult.v },
-        state[v].validation as ValidationStateType,
-        { omit: helper.ok[v], keyPath }
-      )
-    };
-
-    if (keyPath === "match") {
-      // Setting the trackMatching for every matched key
-      helper.tm[v] = setTrackingMatching(helper, v, [
-        stateKey,
-        ...matchResult.mk.filter((value) => value !== v),
-        matchResult.lm
-      ]);
-    }
-  });
-
-  // We updated the current input with the appropriate validation
-  state[stateKey].validation = {
-    ...merge(
-      merge({ ...matchResult.v }, mmv, {
-        omit: helper.ok[stateKey],
-        keyPath
-      }),
-      state[stateKey].validation as ValidationStateType,
-      {
-        keyPath
-      }
-    ),
-    ...(keyPath === "match"
-      ? {
-          match: matchOrCopyKey
-        }
-      : {
-          copy: helper.s[stateKey].validation?.copy
-        })
-  } as ValidationStateType;
-
-  if (keyPath === "match") {
-    // Setting the trackMatching for current key
-    helper.tm[stateKey] = setTrackingMatching(helper, stateKey, [
-      ...matchResult.mk,
-      matchResult.lm
-    ]);
-    // Setting the trackMatching for last matched
-    helper.tm[matchResult.lm] = setTrackingMatching(helper, matchResult.lm, [
-      stateKey,
-      ...matchResult.mk
-    ]);
-  }
-
-  // We save the error message because, the errorMessage is dynamic, and we need to fall back to the original if needed
-  helper.em[stateKey] =
-    state[stateKey].errorMessage ??
-    state[matchOrCopyKey].errorMessage ??
-    state[matchResult.lm].errorMessage;
-
-  return state;
-};
-
-/**
- *  Mr is matching rules
- * We check suspicious validation key and match key which is a typical scenario for password and confirm Password
- * The validation system for matched values need them to both have the validation options.
- * For example, a user enter
- * {
- *    password: {
- *      validation: {
- *        minLength: 4
- *      }
- *    },
- *    confirmPassword: {validation: {match: "password"}}
- * }.
- *
- */
-const matchRules = (state: CreateObjectInputs<string>, helper: Helper) => {
-  const patch = {
-    checkbox: {
-      tab: []
-    },
-    radio: {
-      tab: []
-    }
-  } as Unknown;
-
-  for (const stateKey in state) {
-    const validation = state[stateKey].validation;
-    const errorMessage = state[stateKey].errorMessage;
-    const type = state[stateKey].type;
-
-    if (type === "checkbox" || type === "radio") {
-      patch[type].tab.push(stateKey);
-      if (!state[stateKey].valid && !patch[type].fv) {
-        patch[type][state[stateKey].name as string] = {
-          validation,
-          errorMessage
-        };
-        // found validation
-        patch[type].fv = true;
-      }
-    }
-
-    // we save the error message
-    helper.em[stateKey] = state[stateKey].errorMessage;
-    // If an input want to copy validation from another input
-    const copyKey = state[stateKey].validation?.copy;
-
-    if (copyKey) {
-      state = mcv(
-        helper,
-        state,
-        stateKey,
-        parseCopy(copyKey, "copy").value,
-        "copy"
+    if (type === FILE) {
+      entry[objKey].files = createFiles(
+        isEvent ? new Set(value.target.files) : value,
+        store,
+        objKey,
+        input
       );
     }
 
-    /*  We get the key to match with, we are trying to see
-     *  for example if confirmPassword want to match validate
-     *  from password
-     **/
-    const matchKey = state[stateKey].validation?.match;
+    const values =
+      type === SELECT
+        ? multiple
+          ? createSelectFiles(
+              isEvent ? new Set(value.target.selectedOptions) : value,
+              input,
+              isEvent
+            )
+          : targetValue !== "" && targetValue !== placeholder
+          ? targetValue
+          : ""
+        : targetValue;
 
-    /* we check if validate and key to match exist else we throw error
-     * For example, we check if state.confirmPassword.validate exists, and we check if matchKey
-     * state.confirmPassword.validate.match exists
-     */
-    if (matchKey) {
-      state = mcv(helper, state, stateKey, matchKey, "match");
-    }
-  }
-
-  O.keys(patch).forEach((o) => {
-    if (patch[o].fv) {
-      patch[o].tab.forEach((id: string) => {
-        // we get the name
-        const name = state[id].name as string;
-        // define errorMessage
-        const errorMessage =
-          state[id].errorMessage ?? patch[o][name].errorMessage;
-        // we save the error message
-        helper.em[id] = errorMessage;
-        // define validation
-        state[id].validation = !state[id].valid
-          ? state[id].validation
-          : patch[o][name].validation;
-        // set errorMessage
-        state[id].errorMessage = errorMessage;
-        // set valid
-        state[id].valid = patch[o][name].validation ? false : state[id].valid;
-      });
-    }
-  });
-
-  return state;
-};
-
-const touchInput = (store: InputStore, helper: Helper) => {
-  const data = store.get("entry");
-  const { isValid, invalidKey } = validateState(data);
-  if (invalidKey) {
-    const input = data[invalidKey];
-    const value =
-      input.type === "file"
-        ? input.files
-        : input.type === "checkbox"
-        ? createCheckboxValue(data, invalidKey, false)
-        : input.value;
-
-    const radioValid = radioIsChecked(data, invalidKey);
-
-    const { em } = validate(
-      helper,
-      data,
-      invalidKey,
-      input.type === "radio" ? (radioValid ? value : null) : value
-    );
-
+    nextChange(values, store, entry, input, objKey);
+  };
+  // Let user set value, type and data
+  fIp.set = (prop, value, fileConfig = {}) => {
     store.set((ref) => {
-      ref.entry[invalidKey].touched = true;
-      ref.entry[invalidKey].valid = false;
-      ref.entry[invalidKey].errorMessage = em;
+      const input = ref.i[objKey];
+      if (prop === "value") {
+        store.fc = fileConfig;
+        initValue(objKey, value, store, input.type);
+      }
+      if (prop === "type") {
+        input.type = value;
+        input.props.type = value;
+      }
+      if (prop === "data") {
+        input[prop] = value;
+      }
     });
-  }
-  return isValid;
+  };
+  fIp.props = {
+    id: fIp.id,
+    accept: fIp.accept,
+    name: fIp.name,
+    type: fIp.type,
+    value: fIp.value,
+    checked: fIp.checked,
+    multiple: fIp.multiple,
+    placeholder: fIp.placeholder,
+    onChange: fIp.onChange
+  } as InputProps;
+
+  const { name } = fIp;
+  // we save the validation
+  const ev = store.ev[name] || {};
+  store.ev[name] = {
+    v: ev.v ?? fIp.validation,
+    // count inputs name
+    c: ev.c ? ev.c + 1 : 1,
+    s: new Set(),
+    o: ev.o ? ev.o.add(objKey) : new Set().add(objKey)
+  };
+  entry[objKey] = fIp;
+  // Reset errorMessage
+  entry[objKey].errorMessage = null;
+  return entry[objKey].valid;
 };
 
-// Validate the state
-// Set form is valid
-const validateState = (data: ObjectInputs<string>): ValidateState => {
+export const finalizeInputs = (initialState: Unknown, config: InputConfig) => {
+  // create initial form
+  const inf = {} as ObjectInputs<string>;
+  // create an empty store populated by createInput
+  const st = createStore({}) as unknown as InputStore;
   let isValid = true;
-  let invalidKey = null;
-  for (const formKey in data) {
-    isValid = isValid && !data[formKey].validating && data[formKey].valid;
-    if (!isValid) {
-      invalidKey = formKey;
-      break;
+  // init extra variables, validation, counter, objKey and checkbox values
+  st.ev = {};
+  // timeout async keys
+  st.a = {};
+  if (matchType(initialState, STRING)) {
+    createInput(inf, st, initialState, initialState);
+  } else {
+    for (const stateKey in initialState) {
+      const iv = createInput(inf, st, initialState[stateKey], stateKey);
+      isValid = isValid && iv;
     }
   }
-  return { isValid, invalidKey };
+  st.set((ref) => {
+    // all inputs
+    ref.i = inf;
+    ref.inv = isValid;
+    // initial valid state
+    ref.iv = isValid;
+    ref.c = config;
+    // isTouched
+    ref.t = false;
+  });
+  return { st, inf };
 };
+
+const touchInput = (store: InputStore) => {
+  const data = store.get("i");
+  // invalid key
+  const ik = validateState(data).ik;
+  if (ik) {
+    const input = data[ik] as Input & GetValue;
+    store.set((ref) =>
+      tem(ref.i, ik, validate(store, data, ik, input.g(input.value, data)))
+    );
+  }
+};
+
 // T transform array to object and vice versa
 const transformToArray = (state: ObjectInputs<string>) => {
   const result: Input[] = [];
@@ -391,52 +196,21 @@ const transformToArray = (state: ObjectInputs<string>) => {
   return result;
 };
 
-const cleanFiles = (files: ParsedFile[]) => {
-  // Set type to any to break the contract type
-  return files.map((f: any) => {
-    delete f.selfRemove;
-    delete f.selfUpdate;
-    delete f.key;
-    return f;
-  });
-};
-
-// E extract values from state
-const extractValues = (state: ObjectInputs<string>) => {
-  const result = {} as { [k in string]: any };
-  for (const key in state) {
-    const K = state[key].name;
-    if (state[key].type === "radio") {
-      if (state[key].checked) {
-        result[K] = state[key].value;
-      } else if (!result[K]) {
-        result[K] = "";
-      }
-    } else if (state[key].type === "checkbox") {
-      if (!result[K]) {
-        result[K] = [];
-      }
-      if (state[key].checked) {
-        result[K].push(state[key].value);
-      }
-    } else {
-      result[K] =
-        state[key].type === "file"
-          ? cleanFiles(state[key].files)
-          : parseValue(state[key], state[key].value);
+export const getInput = (
+  store: InputStore,
+  name: string
+): { r: Input[]; o: string } => {
+  const entry = store.get("i");
+  const r: Input[] = [];
+  // o = objkey
+  let o = "";
+  keys(entry).forEach((k) => {
+    if (entry[k].name === name) {
+      r.push(entry[k]);
+      o = k;
     }
-  }
-  return result;
+  });
+  return { r, o };
 };
 
-export {
-  commonProps,
-  validateState,
-  matchRules,
-  transformToArray,
-  extractValues,
-  parseValue,
-  touchInput,
-  lockProps,
-  O
-};
+export { transformToArray, touchInput };

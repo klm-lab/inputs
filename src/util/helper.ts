@@ -1,37 +1,18 @@
-import type { ComputeOnceOut, Helper, CreateObjectInputs } from "../types";
+import { Computed, Unknown } from "../types";
 
-const He = (): Helper => {
-  // omitted keys
-  const ok = {};
-  //state
-  const s = {};
-  // error message
-  const em = {};
-  // tracking matching
-  const tm = {};
-  // async delay
-  const a = {};
-
-  const clean = (s: CreateObjectInputs<string>) => {
-    for (const sKey in s) {
-      delete s[sKey].validation?.copy;
-      delete s[sKey].validation?.match;
-    }
-    return s;
-  };
-  return { ok, s, em, tm, a, clean };
+let key = -1;
+export const newKey = (): string => {
+  key++;
+  return `*_*_${key}`;
 };
 
-const persist = {} as { [k in string]: ComputeOnceOut };
-const getKey = () => {
-  let i = -1;
-  return {
-    get new() {
-      i++;
-      return `*_*_${i}`;
-    }
-  };
-};
-const KEY = getKey();
+export const persist = {} as { [k in string]: Computed };
 
-export { persist, He, KEY };
+export const keys = Object.keys;
+export const CHECKBOX = "checkbox";
+export const RADIO = "radio";
+export const STRING = "string";
+export const SELECT = "select";
+export const FILE = "file";
+export const { revokeObjectURL: R, createObjectURL: C } = URL;
+export const matchType = (v: Unknown, type: string) => typeof v === type;

@@ -11,7 +11,11 @@ module.exports = [
       {
         file: "lib/index.js",
         format: "cjs",
-        plugins: [terser()]
+        plugins: [
+          terser({
+            compress: true
+          })
+        ]
       },
       // {
       //   file: "lib/index.min.js",
@@ -21,7 +25,13 @@ module.exports = [
       {
         file: "lib/index.mjs",
         format: "esm",
-        plugins: [terser()]
+        plugins: [
+          terser({
+            ecma: 2020,
+            compress: true,
+            module: true
+          })
+        ]
       }
       // {
       //   file: "lib/index.esm.min.mjs",

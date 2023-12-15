@@ -1,6 +1,6 @@
 {
   "name": "aio-inputs",
-  "version": "2.2.0",
+  "version": "3.1.1",
   "description": "An opinionated inputs state manager for react",
   "scripts": {
     "build": "npm ci && npm run build:noci",
@@ -57,6 +57,9 @@
     "rollup-plugin-copy": "^3.5.0",
     "typescript": "^5.2.2"
   },
+  "types": "./index.d.ts",
+  "main": "./index.js",
+  "module": "./index.mjs",
   "exports": {
     ".": {
       "types": "./index.d.ts",
@@ -74,7 +77,7 @@
     "state"
   ],
   "dependencies": {
-    "aio-store": "^2.4.42"
+    "aio-store": "^2.5.0"
   },
   "peerDependencies": {
     "react": "^18.2.0"

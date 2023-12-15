@@ -1,156 +1,97 @@
-import type {
-  Helper,
+import {
   Input,
-  InputConfig,
   InputStore,
+  InternalInput,
   ObjectInputs,
-  ParsedFile
+  Unknown
 } from "../../types";
-import { AsyncValidationParams } from "../../types";
-import { asyncValidation, validate } from "../../util/validation";
-import { validateState } from "../../util";
-import { createFiles } from "./files";
-import { createSelectFiles } from "./select";
-import { createCheckboxValue } from "./checkbox";
+import { validate, validateState } from "../validations";
+import { extractValues, setValue } from "./values";
+import { retrieveFile } from "./files";
+import { CHECKBOX, FILE, RADIO } from "../../util/helper";
+import { setCRValues } from "./checkboxAndRadio";
 
-const asyncCallback = ({
-  valid: asyncValid,
-  em: asyncErrorMessage,
-  entry,
-  store,
-  failed,
-  helper
-}: AsyncValidationParams) => {
-  // Clone inputs
-  const clone = store.get("entry");
-  const ID = entry.id;
-
-  if (failed) {
-    clone[ID].validating = false;
-    clone[ID].asyncValidationFailed = true;
-    syncChanges(store, clone);
-    return;
-  }
-
-  // Revalidate input, maybe a change occurs before server response
-  const { valid, em } = validate(helper, clone, ID, clone[ID].value);
-  // Add server validation only actual data is valid
-  clone[ID].valid = valid && asyncValid;
-  // Add server error message only actual data is valid else keep actual error Message
-  clone[ID].errorMessage = valid ? asyncErrorMessage : em;
-  // Finish calling server
-  clone[ID].validating = false;
-  // Sync handlers
-  syncChanges(store, clone);
-};
-
-const onChange = (
-  input: Input,
-  element: HTMLInputElement | HTMLSelectElement,
+export const initValue = (
+  objKey: string,
+  value: Unknown,
   store: InputStore,
-  config: InputConfig,
-  isEvent: boolean,
-  helper: Helper
+  type: string
 ) => {
   // Clone inputs
-  const clone = store.get("entry");
-  const ID = input.id;
-  // Get the value based on type
-  const value =
-    input.type === "file"
-      ? createFiles(
-          (element as HTMLInputElement).files,
-          clone,
-          ID,
-          store,
-          config,
-          helper
-        )
-      : input.type === "select"
-      ? input.multiple
-        ? createSelectFiles(isEvent, element as HTMLSelectElement, clone, ID)
-        : element.value !== "" && element.value !== clone[ID].placeholder
-        ? element.value
-        : ""
-      : element.value;
+  const input = store.get(`i.${objKey}`);
 
-  const toValidate =
-    input.type === "checkbox" ? createCheckboxValue(clone, ID) : value;
-
-  // Validate inputs
-  const { valid, em } = validate(helper, clone, ID, toValidate);
-  // Handle type file
-  if (input.type === "file") {
-    clone[ID].files = value as ParsedFile[];
-  } else if (input.type === "radio") {
-    // Check right radio input
-    for (const key in clone) {
-      if (clone[key].type === "radio" && clone[key].name === clone[ID].name) {
-        clone[key].checked = clone[key].value === value;
-        clone[key].props.checked = clone[key].value === value;
-        clone[key].valid = true;
-      }
-    }
-  } else if (input.type === "checkbox") {
-    // Toggle the checkbox input
-    clone[ID].checked = !clone[ID].checked;
-    clone[ID].props.checked = !clone[ID].props.checked;
-  } else {
-    clone[ID].value = value;
-    clone[ID].props.value = value;
+  if (type === FILE) {
+    [value].flat().forEach((v: Unknown, index: number) => {
+      retrieveFile(v, store, objKey, index);
+    });
+    return;
   }
-  // Touched input
-  clone[ID].touched = true;
-  // Set valid to false if async is present else keep validation result
-  clone[ID].valid = (input.validation?.asyncCustom as unknown) ? false : valid;
-  // Set errorMessage only if invalid if not keep the default errorMessage structure, Object or undefined
-  clone[ID].errorMessage = !valid ? em : em instanceof Object ? {} : undefined;
-  /* if it is valid then if async is true, we set validating to true otherwise false
-   * valid === false mean no need to call async,
-   * valid === true means we can call async if async is set to true by the user.
-   *
-   * validating prop is responsible to show async validation loading
-   * */
-  // If all change are valid and async is there, we set valid to false else true
-  clone[ID].validating = valid ? !!input.validation?.asyncCustom : false;
-  // asyncValidationFailed by default because call asyncCustom
-  clone[ID].asyncValidationFailed = false;
-
-  // if valid and async is there, we call async validation
-  valid &&
-    (input.validation?.asyncCustom as unknown) &&
-    asyncValidation(store, helper, clone, ID, value, asyncCallback);
-  // we sync handlers
-  syncChanges(store, clone);
-};
-
-const syncChanges = (store: InputStore, data: ObjectInputs<string>) => {
+  if (type === RADIO) {
+    // Check right radio input
+    setValue(input, input.value === value);
+  } else if (type === CHECKBOX) {
+    // Toggle the checkbox input
+    setValue(input, value.length ? value.includes(input.value) : value);
+  } else {
+    setValue(input, value, false);
+  }
+  // Sync handlers
   store.set((ref) => {
-    ref.entry = data;
-    ref.isValid = validateState(data).isValid;
+    ref.i[objKey] = input;
+    ref.i[objKey].valid = true;
   });
 };
 
-export const inputChange = (
-  value: any,
-  key: string,
-  entry: ObjectInputs<string>,
+export const nextChange = (
+  value: Unknown,
   store: InputStore,
-  config: InputConfig,
-  helper: Helper
+  entry: ObjectInputs<string>,
+  input: Input,
+  objKey: string
 ) => {
-  const isEvent = typeof value.preventDefault === "function";
-  const element = {} as any;
-  if (!isEvent) {
-    if (entry[key].type === "file") {
-      element.files = value;
-    } else {
-      element.value = value;
-    }
+  const { name, checked, type } = input;
+  if (type === RADIO) {
+    // Check right radio input and make other valid
+    setCRValues(store, entry, name, (i) => setValue(i, i.value === value));
+  } else if (type === CHECKBOX) {
+    // Toggle the checkbox input
+    setValue(input, !checked);
+    // Keep only selected checkbox
+    store.ev[name].s[!checked ? "add" : "delete"](value);
+    // Make checkbox valid and clear errorMessage
+    setCRValues(store, entry, name);
+    // Selected checkbox that can be validated
+    value = [...store.ev[name].s];
   } else {
-    element.value = value.target.value || value.nativeEvent.text || "";
-    element.files = value.target.files || [];
-    element.selectedOptions = value.target.selectedOptions || [];
+    setValue(input, value, false);
   }
-  onChange(entry[key], element, store, config, isEvent, helper);
+  // we sync handlers
+  syncChanges(store, tem(entry, objKey, validate(store, entry, objKey, value)));
+  // run after changes
+  const r = (input as InternalInput).afterChange;
+  r &&
+    r({
+      value: extractValues(store.get("i"))[name],
+      input
+    });
+};
+
+// Set touch, valid and error message
+export const tem = (
+  entry: ObjectInputs<string>,
+  objKey: string,
+  em: Unknown
+) => {
+  entry[objKey].touched = true;
+  entry[objKey].valid = !em;
+  entry[objKey].errorMessage = em;
+  return entry;
+};
+
+export const syncChanges = (store: InputStore, data: ObjectInputs<string>) => {
+  store.set((ref) => {
+    ref.i = data;
+    ref.t = true;
+    ref.iv = validateState(data).iv;
+  });
 };

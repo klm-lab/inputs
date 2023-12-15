@@ -1,29 +1,17 @@
-import type { ObjectInputs } from "../../types";
+import type { Input, Unknown } from "../../types";
 
 export const createSelectFiles = (
-  isEvent: boolean,
-  element: HTMLSelectElement,
-  clone: ObjectInputs<string>,
-  ID: string
+  value: Unknown,
+  input: Input,
+  isEvent: boolean
 ) => {
-  let selected = [] as string[];
+  const selected: Set<string> = new Set(isEvent ? "" : input.value);
   if (isEvent) {
-    const els = element.selectedOptions;
-    for (let i = 0; i < els.length; i++) {
-      els[i].value !== "" &&
-        els[i].value !== clone[ID].placeholder &&
-        selected.push(els[i].value);
-    }
+    value.forEach((o: Unknown) => selected.add(o.value));
   } else {
-    // Not need to clone, we keep the same reference safely
-    selected = clone[ID].value;
-    if (selected.includes(element.value)) {
-      selected = selected.filter((v: any) => v !== element.value);
-    } else {
-      element.value !== "" &&
-        element.value !== clone[ID].placeholder &&
-        selected.push(element.value);
-    }
+    selected[selected.has(value) ? "delete" : "add"](value);
   }
-  return selected;
+  selected.delete("");
+  selected.delete(input.placeholder);
+  return [...selected];
 };

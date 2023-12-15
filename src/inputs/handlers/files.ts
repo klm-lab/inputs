@@ -1,181 +1,143 @@
-import type {
-  Helper,
-  InitFileConfig,
-  InputConfig,
-  InputStore,
-  ObjectInputs,
-  ParsedFile
-} from "../../types";
-import { validate } from "../../util/validation";
-import { validateState } from "../../util";
-import { KEY } from "../../util/helper";
+import type { Input, InputStore, IPS, ParsedFile, Unknown } from "../../types";
+import { validate, validateState } from "../validations";
+import { C, newKey, R } from "../../util/helper";
 
 export const createFiles = (
-  files: FileList | null,
-  clone: ObjectInputs<string>,
-  ID: string,
+  value: Unknown,
   store: InputStore,
-  config: InputConfig,
-  helper: Helper
+  objKey: string,
+  input: Input
 ) => {
-  const entry = clone[ID];
-  const parsed: ParsedFile[] = entry.mergeChanges ? [...entry.files] : [];
-  //  const dataTransfer = new DataTransfer();
-  if (!entry.mergeChanges) {
-    entry.files.forEach((p) => URL.revokeObjectURL(p.url));
+  const parsed: ParsedFile[] = input.merge ? [...input.files] : [];
+  if (!input.merge) {
+    // revoke preview file url
+    input.files.forEach((p) => R(p.url));
   }
-  if (files) {
-    for (let i = 0; i < files.length; i++) {
-      parsed.push(
-        parseFile(
-          clone,
-          ID,
-          store,
-          config,
-          URL.createObjectURL(files[i]),
-          false,
-          files[i],
-          helper
-        )
-      );
-      //  dataTransfer.items.add(files[i]);
-    }
-  }
+  value.forEach((f: Unknown) => {
+    // parse and add new file
+    parsed.push(parseFile(objKey, store, C(f), false, f));
+  });
   return parsed;
 };
 
+// return result in r and files in f
+const filterOrFindIndex = (
+  ref: IPS,
+  objKey: string,
+  cb: Unknown,
+  ac: string = "findIndex"
+) => {
+  const f = ref.i[objKey].files;
+  const r = (f as Unknown)[ac](cb);
+  return { f, r };
+};
+
 export const parseFile = (
-  clone: ObjectInputs<string>,
-  ID: string,
+  objKey: string,
   store: InputStore,
-  config: InputConfig,
   url: string,
-  gettingFile: boolean,
-  file: File,
-  helper: Helper
+  fetching: boolean,
+  file: File
 ): ParsedFile => {
-  const key = KEY.new;
+  const key = newKey();
   return {
-    gettingFile,
+    fetching,
     file,
     key,
     url,
-    fileUpdate: null,
+    update: null,
     loaded: false,
     onLoad: () => {
-      !config.persistID && URL.revokeObjectURL(url);
+      !store.get("c").pid && R(url);
       store.set((ref) => {
-        const index = ref.entry[ID].files.findIndex((f) => f.key === key);
-        ref.entry[ID].files[index].loaded = true;
+        // const index = ref.i[objKey].files.findIndex((f) => f.key === key);
+        const { r } = filterOrFindIndex(
+          ref,
+          objKey,
+          (f: ParsedFile) => f.key === key
+        );
+        ref.i[objKey].files[r].loaded = true;
       });
     },
-    selfUpdate: (data: any) => {
+    selfUpdate: (data: Unknown) => {
       store.set((ref) => {
-        const files = ref.entry[ID].files;
-        const index = files.findIndex((f) => f.key === key);
-        files[index].fileUpdate = data;
-        ref.entry[ID].files = files;
+        const { f, r } = filterOrFindIndex(
+          ref,
+          objKey,
+          (f: ParsedFile) => f.key === key
+        );
+        // const files = ref.i[objKey].files;
+        // const index = files.findIndex((f) => f.key === key);
+        f[r].update = data;
+        ref.i[objKey].files = f;
       });
     },
     selfRemove: () => {
       store.set((ref) => {
-        const files = ref.entry[ID].files;
-        const newFiles = files.filter((f) => f.key !== key);
+        const entry = store.get("i");
+        const input = ref.i[objKey];
+        // const files = ref.i[objKey].files;
+        // const newFiles = files.filter((f) => f.key !== key);
+        const { r } = filterOrFindIndex(
+          ref,
+          objKey,
+          (f: ParsedFile) => f.key !== key,
+          "filter"
+        );
         // Validate input
-        const { valid, em } = validate(helper, clone, ID, newFiles);
-        ref.entry[ID].files = newFiles;
-        ref.entry[ID].valid = valid;
-        ref.entry[ID].errorMessage = em;
+        const em = validate(store, entry, objKey, r);
+        input.files = r;
+        input.valid = !em;
+        input.errorMessage = em;
         // Validate form
-        ref.isValid = validateState(ref.entry).isValid;
+        ref.iv = validateState(ref.i).iv;
       });
     }
   };
 };
 
-const getFile = (url: string, blob: Blob) => {
-  const fileName = url.match(/([a-z0-9_-]+\.\w+)(?!.*\/)/gi);
-  return new File([blob], fileName ? fileName[0] : "", {
-    type: blob.type
-  });
-};
-
-export const blobStringJob = (
-  value: any,
+export const retrieveFile = (
+  value: Unknown,
   store: InputStore,
-  clone: ObjectInputs<string>,
-  ID: string,
-  config: InputConfig,
-  fileConfig: InitFileConfig,
-  index: number,
-  valid: boolean,
-  helper: Helper
+  id: string,
+  index: number
 ) => {
+  const fileConfig = store.fc;
   store.set((ref) => {
-    ref.entry[ID].files[index] = parseFile(
-      clone,
-      ID,
+    ref.i[id].files[index] = parseFile(
+      id,
       store,
-      config,
       value,
       !!fileConfig.getBlob, // true is getBlob is present
-      {} as File,
-      helper
+      {} as File
     );
-    ref.entry[ID].valid = valid;
+    ref.i[id].valid = true;
   });
   if (fileConfig.getBlob) {
-    Promise.resolve(fileConfig.getBlob(value)).then((blob) => {
+    Promise.resolve(fileConfig.getBlob(value)).then((r) => {
       store.set((ref) => {
-        ref.entry[ID].files[index].gettingFile = false;
-        ref.entry[ID].files[index].file = getFile(value, blob);
+        const f = ref.i[id].files[index];
+        f.fetching = false;
+        f.file = r as File;
       });
     });
   }
 };
 
-export const retrieveBlob = (
-  value: any,
-  store: InputStore,
-  clone: ObjectInputs<string>,
-  ID: string,
-  config: InputConfig,
-  fileConfig: InitFileConfig,
-  valid: boolean,
-  helper: Helper
-) => {
-  if (value instanceof Array) {
-    value.forEach((v, index) => {
-      blobStringJob(
-        v,
-        store,
-        clone,
-        ID,
-        config,
-        fileConfig,
-        index,
-        valid,
-        helper
-      );
+export const cleanFiles = (files: ParsedFile[]) => {
+  // Set type to any to break the contract type
+  return files.map((f: any) => {
+    [
+      "selfRemove",
+      "selfUpdate",
+      "key",
+      "fetching",
+      "loaded",
+      "url",
+      "onLoad"
+    ].forEach((k) => {
+      delete f[k];
     });
-    return;
-  }
-  if (typeof value === "string") {
-    blobStringJob(
-      value,
-      store,
-      clone,
-      ID,
-      config,
-      fileConfig,
-      0,
-      valid,
-      helper
-    );
-    return;
-  }
-  throw Error(
-    "Format must be a string or an array of string for this file " +
-      JSON.stringify(value)
-  );
+    return f;
+  });
 };
