@@ -124,6 +124,7 @@ export const retrieveFile = (
   }
 };
 
+// Remove useless tools for db
 export const cleanFiles = (files: ParsedFile[]) => {
   // Set type to any to break the contract type
   return files.map((f: any) => {

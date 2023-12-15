@@ -177,20 +177,14 @@ interface IsValid {
 interface CommonForm {
   reset(): void;
 
-  forEach(callback: ForEachCallback): void;
-
-  map(callback: MapCallback): Unknown[];
+  each(callback: EachCallback): Unknown[];
 
   showError(): void;
 
   get(name: string): Input[];
 }
 
-interface ForEachCallback {
-  (input: Input, index: number, array: ArrayInputs): void;
-}
-
-interface MapCallback {
+interface EachCallback {
   (input: Input, index: number, array: ArrayInputs): Unknown;
 }
 
@@ -221,9 +215,13 @@ type InputStore = StoreType<IPS> & {
       // a set of value
       s: Set<Unknown>;
       // objkey bind to name
-      o: Set<Unknown>;
+      o: Unknown[];
+      // common objKey
+      k: string;
     };
   };
+  // all inputs name
+  n: Unknown[];
 };
 type AsyncValidationParams = {
   em?: Unknown;
@@ -305,7 +303,7 @@ interface TrackInputs {
 }
 
 interface GetValue {
-  g(oldValue: Unknown, data?: ObjectInputs<string>): Unknown;
+  g(oldValue: Unknown, touching?: boolean): Unknown;
 }
 
 export type {
@@ -326,8 +324,7 @@ export type {
   Computed,
   ParsedFile,
   FileConfig,
-  ForEachCallback,
-  MapCallback,
+  EachCallback,
   IsValid,
   CreateObjectInputs,
   ArrayInputs,

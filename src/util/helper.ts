@@ -5,6 +5,7 @@ export const newKey = (): string => {
   key++;
   return `*_*_${key}`;
 };
+export const newSet = (p?: Unknown): Set<Unknown> => new Set(p);
 
 export const persist = {} as { [k in string]: Computed };
 

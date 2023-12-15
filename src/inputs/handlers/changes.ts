@@ -66,7 +66,10 @@ export const nextChange = (
     setValue(input, value, false);
   }
   // we sync handlers
-  syncChanges(store, tem(entry, objKey, validate(store, entry, objKey, value)));
+  syncChanges(
+    store,
+    setValidAndEm(entry, objKey, validate(store, entry, objKey, value))
+  );
   // run after changes
   const r = (input as InternalInput).afterChange;
   r &&
@@ -76,8 +79,8 @@ export const nextChange = (
     });
 };
 
-// Set touch, valid and error message
-export const tem = (
+// Set touched, valid and error message
+export const setValidAndEm = (
   entry: ObjectInputs<string>,
   objKey: string,
   em: Unknown
@@ -90,8 +93,11 @@ export const tem = (
 
 export const syncChanges = (store: InputStore, data: ObjectInputs<string>) => {
   store.set((ref) => {
+    // updated inputs
     ref.i = data;
+    // isTouched
     ref.t = true;
+    // new valid state
     ref.iv = validateState(data).iv;
   });
 };

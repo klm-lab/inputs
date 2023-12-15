@@ -11,21 +11,27 @@ import { validate, validateState } from "../inputs/validations";
 import {
   CHECKBOX,
   FILE,
-  newKey,
   keys,
   matchType,
+  newKey,
+  newSet,
   RADIO,
   SELECT,
   STRING
 } from "./helper";
 import { createStore } from "aio-store/react";
-import { initValue, nextChange, tem } from "../inputs/handlers/changes";
+import {
+  initValue,
+  nextChange,
+  setValidAndEm
+} from "../inputs/handlers/changes";
 import { cleanFiles, createFiles } from "../inputs/handlers/files";
 import { createSelectFiles } from "../inputs/handlers/select";
 
 const createInput = (
   entry: Unknown,
   store: InputStore,
+  // input
   inp: Unknown,
   objKey: string
 ) => {
@@ -35,12 +41,7 @@ const createInput = (
   const fIp = {
     id: id ?? key,
     name: isString ? inp : key,
-    value:
-      type === SELECT && multiple
-        ? []
-        : [RADIO, CHECKBOX].includes(type)
-        ? objKey
-        : "",
+    value: type === SELECT && multiple ? [] : type === RADIO ? objKey : "",
     files: [],
     checked: false,
     valid: checked ? true : !keys(validation).length,
@@ -48,19 +49,21 @@ const createInput = (
     key
   } as Input & GetValue;
 
-  fIp.g = function (oldValue, data) {
+  fIp.g = function (oldValue, touching) {
     const { type, value, files, checked, name } = this;
     const ev = store.ev[name];
     if (type === FILE) {
       return cleanFiles(files);
     }
     if (type === RADIO) {
-      return data ? "" : checked ? value : oldValue ?? "";
+      return touching ? "" : checked ? value : oldValue ?? "";
     }
     if (type === CHECKBOX) {
-      if (data || ev.c > 1) {
+      // multiple checkbox
+      if (touching || ev.c > 1) {
         return [...ev.s];
       }
+      // unique checkbox
       return checked;
     }
     return value;
@@ -77,7 +80,7 @@ const createInput = (
 
     if (type === FILE) {
       entry[objKey].files = createFiles(
-        isEvent ? new Set(value.target.files) : value,
+        isEvent ? newSet(value.target.files) : value,
         store,
         objKey,
         input
@@ -88,7 +91,7 @@ const createInput = (
       type === SELECT
         ? multiple
           ? createSelectFiles(
-              isEvent ? new Set(value.target.selectedOptions) : value,
+              isEvent ? newSet(value.target.selectedOptions) : value,
               input,
               isEvent
             )
@@ -113,6 +116,8 @@ const createInput = (
       }
       if (prop === "data") {
         input[prop] = value;
+        // save data to original inputs to let reset keep the data
+        entry[objKey].data = value;
       }
     });
   };
@@ -132,12 +137,20 @@ const createInput = (
   // we save the validation
   const ev = store.ev[name] || {};
   store.ev[name] = {
+    // save validations
     v: ev.v ?? fIp.validation,
     // count inputs name
     c: ev.c ? ev.c + 1 : 1,
-    s: new Set(),
-    o: ev.o ? ev.o.add(objKey) : new Set().add(objKey)
+    // track selected value
+    s: newSet(),
+    // save object keys for form.get, checkbox and radio value changes
+    o: [...(ev.o ?? []), objKey],
+    // save common objKey for copy and match validation
+    k: objKey
   };
+  // save all name for reset function
+  store.n = [...(store.n ?? []), name];
+  // assign the final input
   entry[objKey] = fIp;
   // Reset errorMessage
   entry[objKey].errorMessage = null;
@@ -145,34 +158,35 @@ const createInput = (
 };
 
 export const finalizeInputs = (initialState: Unknown, config: InputConfig) => {
-  // create initial form
-  const inf = {} as ObjectInputs<string>;
+  // create initial inputs
+  const ip = {} as ObjectInputs<string>;
   // create an empty store populated by createInput
   const st = createStore({}) as unknown as InputStore;
   let isValid = true;
   // init extra variables, validation, counter, objKey and checkbox values
   st.ev = {};
-  // timeout async keys
+  // timeout async keys, used in asyncCustom to save avery async request timeout with the input key
   st.a = {};
   if (matchType(initialState, STRING)) {
-    createInput(inf, st, initialState, initialState);
+    createInput(ip, st, initialState, initialState);
   } else {
     for (const stateKey in initialState) {
-      const iv = createInput(inf, st, initialState[stateKey], stateKey);
+      const iv = createInput(ip, st, initialState[stateKey], stateKey);
       isValid = isValid && iv;
     }
   }
   st.set((ref) => {
     // all inputs
-    ref.i = inf;
-    ref.inv = isValid;
+    ref.i = ip;
     // initial valid state
+    ref.inv = isValid;
+    // first valid state
     ref.iv = isValid;
     ref.c = config;
     // isTouched
     ref.t = false;
   });
-  return { st, inf };
+  return { st, ip };
 };
 
 const touchInput = (store: InputStore) => {
@@ -182,7 +196,11 @@ const touchInput = (store: InputStore) => {
   if (ik) {
     const input = data[ik] as Input & GetValue;
     store.set((ref) =>
-      tem(ref.i, ik, validate(store, data, ik, input.g(input.value, data)))
+      setValidAndEm(
+        ref.i,
+        ik,
+        validate(store, data, ik, input.g(input.value, true))
+      )
     );
   }
 };
@@ -194,23 +212,6 @@ const transformToArray = (state: ObjectInputs<string>) => {
     result.push(state[key]);
   }
   return result;
-};
-
-export const getInput = (
-  store: InputStore,
-  name: string
-): { r: Input[]; o: string } => {
-  const entry = store.get("i");
-  const r: Input[] = [];
-  // o = objkey
-  let o = "";
-  keys(entry).forEach((k) => {
-    if (entry[k].name === name) {
-      r.push(entry[k]);
-      o = k;
-    }
-  });
-  return { r, o };
 };
 
 export { transformToArray, touchInput };

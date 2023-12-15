@@ -35,13 +35,13 @@ An input state management for React. It comes with useful common validations if 
 [MIT][license-url]
 
 
-[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-inputs/3.1.1?style=for-the-badge
+[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-inputs/3.1.2?style=for-the-badge
 
 [license-shield]: https://img.shields.io/github/license/klm-lab/inputs?style=for-the-badge
 
 [action-shield]: https://img.shields.io/github/actions/workflow/status/klm-lab/inputs/publish.yml?style=for-the-badge
 [version-shield]: https://img.shields.io/npm/v/aio-inputs?style=for-the-badge
-[example-links]: https://github.com/klm-lab/inputs/tree/dev/examples#readme
+[example-links]: https://aio-inputs.netlify.app/examples/text
 [docs-repo]: https://github.com/klm-lab/aio-inputs-docs#readme
 [docs-site]: https://aio-inputs.netlify.app
 [edit-link]: https://github.com/klm-lab/inputs/blob/dev/examples/edit.tsx
