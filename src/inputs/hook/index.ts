@@ -12,9 +12,10 @@ import { transformToArray } from "../../util";
 
 const next = (computed: Computed) => {
   const { st, cp, a } = computed;
-  const { i, iv } = st();
+  const { i, iv, t } = st();
   const parsedInputs = a ? transformToArray(i) : i;
   (parsedInputs as typeof parsedInputs & IsValid).isValid = iv;
+  (parsedInputs as typeof parsedInputs & IsValid).isTouched = t;
   return [parsedInputs, cp];
 };
 

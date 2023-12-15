@@ -4,19 +4,9 @@ export const startsWith = (
   startsWith: Unknown,
   em?: Unknown
 ): ValidateInput => {
-  return ({ va }) => {
-    return {
-      v: va.startsWith(startsWith),
-      em
-    };
-  };
+  return ({ va }) => (va.startsWith(startsWith) ? null : em);
 };
 
 export const endsWith = (endsWith: Unknown, em?: Unknown): ValidateInput => {
-  return ({ va }) => {
-    return {
-      v: va.endsWith(endsWith),
-      em
-    };
-  };
+  return ({ va }) => (va.endsWith(endsWith) ? null : em);
 };

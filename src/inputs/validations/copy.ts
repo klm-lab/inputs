@@ -7,17 +7,6 @@ export const copy = (
   omittedRules?: (keyof ValidationStateType)[]
 ): ValidateInput => {
   return ({ i, ok, st, va, omr }) => {
-    const v = validate(
-      st,
-      i!,
-      getInput(st, name).o,
-      va,
-      omittedRules ?? omr,
-      ok
-    );
-    return {
-      v: v.v,
-      em: v.em
-    };
+    return validate(st, i!, getInput(st, name).o, va, omittedRules ?? omr, ok);
   };
 };

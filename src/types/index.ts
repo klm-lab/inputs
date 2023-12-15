@@ -26,15 +26,8 @@ type HTMLInputTypeAttribute =
 
 type Unknown = any;
 
-interface CustomValidationType {
-  (value: Unknown, setErrorMessage: (message: Unknown) => void): boolean;
-}
-
 interface CustomAsyncValidationType {
-  (
-    value: Unknown,
-    setErrorMessage: (message: Unknown) => void
-  ): Promise<boolean>;
+  (value: Unknown): Promise<Unknown>;
 }
 
 type ValidateInputParams = {
@@ -52,11 +45,7 @@ type ValidateInputParams = {
   st: InputStore;
 };
 type ValidateInput = (params: ValidateInputParams) => ValidationResult;
-type ValidationResult = {
-  em: Unknown;
-  // valid
-  v: boolean;
-};
+type ValidationResult = Unknown;
 type AsyncValidateInput = (params: ValidateInputParams) => void;
 
 interface ValidationStateType {
@@ -74,7 +63,7 @@ interface ValidationStateType {
   endsWith?: ValidateInput;
   regex?: ValidateInput;
   copy?: ValidateInput;
-  custom?: ValidateInput;
+  custom?: (value: Unknown) => Unknown;
   asyncCustom?: ValidateInput;
 }
 
@@ -91,7 +80,6 @@ interface InternalInput {
   valid?: boolean;
   touched?: boolean;
   placeholder?: Unknown;
-  errorMessage?: Unknown;
   validation?: ValidationStateType;
   data?: Unknown;
 
@@ -123,7 +111,6 @@ type ValidateState = {
 // FOr some reason, Build-in Required doesn't work
 interface InputProps {
   id: string;
-  required: boolean;
   accept: string;
   name: string;
   min: number | string;
@@ -179,18 +166,15 @@ type ArrayStateOutput = [ArrayInputs & IsValid, Form];
 
 type InputConfig = {
   asyncDelay?: number;
-  persistID?: string;
+  pid?: string;
 };
 
 interface IsValid {
   isValid: boolean;
+  isTouched: boolean;
 }
 
 interface CommonForm {
-  // toObject(): ObjectInputs<string> & IsValid;
-  //
-  // toArray(): ArrayInputs & IsValid;
-
   reset(): void;
 
   forEach(callback: ForEachCallback): void;
@@ -217,16 +201,31 @@ interface Form extends CommonForm {
 }
 type IPS = {
   i: ObjectInputs<string>;
+  //touched
+  t: boolean;
   iv: boolean;
   // helper: Helper;
   inv: boolean;
   // asyncDelay: number;
   c: InputConfig;
 };
-type InputStore = StoreType<IPS> & { h: HelperType; fc: FileConfig };
+type InputStore = StoreType<IPS> & {
+  fc: FileConfig;
+  // async Delay key
+  a: { [k in string]: Unknown };
+  // extra variables, validation, counter, objKey and checkbox values
+  ev: {
+    [k in string]: {
+      v: ValidationStateType;
+      c: number;
+      // a set of value
+      s: Set<Unknown>;
+      // objkey bind to name
+      o: Set<Unknown>;
+    };
+  };
+};
 type AsyncValidationParams = {
-  // valid
-  v?: boolean;
   em?: Unknown;
   // objkey
   ok: string;
@@ -252,13 +251,6 @@ interface Computed {
   iv(): boolean;
   // array
   a: boolean;
-}
-
-interface HelperType {
-  key(): string;
-
-  a: { [k in string]: Unknown };
-  ev: { [k in string]: { e: Unknown; v: ValidationStateType; c: number } };
 }
 
 interface InputsHook {
@@ -320,13 +312,11 @@ export type {
   InputsHook,
   GetValue,
   TrackInputs,
-  HelperType,
   ObjStateOutput,
   ArrayStateOutput,
   InternalInput,
   Unknown,
   ValidationStateType,
-  CustomValidationType,
   Form,
   InputConfig,
   Input,

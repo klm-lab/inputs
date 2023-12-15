@@ -12,5 +12,4 @@ export { regex } from "./inputs/validations/regex";
 export { startsWith, endsWith } from "./inputs/validations/string";
 export { copy } from "./inputs/validations/copy";
 export { match } from "./inputs/validations/match";
-export { custom } from "./inputs/validations/custom";
 export { asyncCustom } from "./inputs/validations/asyncCustom";
