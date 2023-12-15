@@ -18,36 +18,29 @@ const validate = (
   o = ok
 ): ValidationResult => {
   const ip: Input = i[ok];
-  const { e, v: rules } = st.h.ev[ip?.name] || {};
-  const result: ValidationResult = {
-    v: true,
-    em: rules ? e : undefined
-  };
+  const rules = st.ev[ip?.name].v;
+  let em: Unknown = null;
   if (!rules) {
-    return result;
+    return em;
   }
   const params = { i, st, ip, ok: o, va, omr } as ValidateInputParams;
 
   new Set(keys(rules)).forEach((r: Unknown) => {
-    if (!result.v) {
+    if (em) {
       return;
     }
     if (!omr.includes(r)) {
-      const v = (rules as Unknown)[r](params) as ValidationResult;
-      result.v = result.v && v.v;
-      // em = errorMessage
-      // after validation if em, then em else saved em
-      result.em = result.v ? undefined : v.em ?? e;
+      const f = (rules as Unknown)[r];
+      em = r === "custom" ? f(va) : f(params);
     }
   });
 
-  if (result.v && rules.asyncCustom) {
+  if (!em && rules.asyncCustom) {
     i[ok].validating = true;
-    result.v = false;
     rules.asyncCustom(params);
   }
 
-  return result;
+  return em;
 };
 
 // Validate the state
@@ -55,11 +48,11 @@ const validateState = (data: ObjectInputs<string>): ValidateState => {
   let iv = true;
   let ik = null;
   for (const formKey in data) {
-    iv = iv && data[formKey].valid;
     if (!iv) {
-      ik = formKey;
       break;
     }
+    iv = data[formKey].valid;
+    ik = formKey;
   }
   return { iv, ik };
 };

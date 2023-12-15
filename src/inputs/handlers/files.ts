@@ -1,5 +1,6 @@
 import type { Input, InputStore, IPS, ParsedFile, Unknown } from "../../types";
 import { validate, validateState } from "../validations";
+import { C, newKey, R } from "../../util/helper";
 
 export const createFiles = (
   value: Unknown,
@@ -9,10 +10,12 @@ export const createFiles = (
 ) => {
   const parsed: ParsedFile[] = input.merge ? [...input.files] : [];
   if (!input.merge) {
-    input.files.forEach((p) => URL.revokeObjectURL(p.url));
+    // revoke preview file url
+    input.files.forEach((p) => R(p.url));
   }
   value.forEach((f: Unknown) => {
-    parsed.push(parseFile(objKey, store, URL.createObjectURL(f), false, f));
+    // parse and add new file
+    parsed.push(parseFile(objKey, store, C(f), false, f));
   });
   return parsed;
 };
@@ -36,7 +39,7 @@ export const parseFile = (
   fetching: boolean,
   file: File
 ): ParsedFile => {
-  const key = store.h.key();
+  const key = newKey();
   return {
     fetching,
     file,
@@ -45,7 +48,7 @@ export const parseFile = (
     update: null,
     loaded: false,
     onLoad: () => {
-      !store.get("c").persistID && URL.revokeObjectURL(url);
+      !store.get("c").pid && R(url);
       store.set((ref) => {
         // const index = ref.i[objKey].files.findIndex((f) => f.key === key);
         const { r } = filterOrFindIndex(
@@ -82,9 +85,9 @@ export const parseFile = (
           "filter"
         );
         // Validate input
-        const { v, em } = validate(store, entry, objKey, r);
+        const em = validate(store, entry, objKey, r);
         input.files = r;
-        input.valid = v;
+        input.valid = !em;
         input.errorMessage = em;
         // Validate form
         ref.iv = validateState(ref.i).iv;

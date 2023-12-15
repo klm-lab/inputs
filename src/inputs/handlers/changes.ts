@@ -6,9 +6,10 @@ import {
   Unknown
 } from "../../types";
 import { validate, validateState } from "../validations";
-import { createCheckboxValue } from "./checkbox";
 import { extractValues, setValue } from "./values";
 import { retrieveFile } from "./files";
+import { CHECKBOX, FILE, RADIO } from "../../util/helper";
+import { setCRValues } from "./checkboxAndRadio";
 
 export const initValue = (
   objKey: string,
@@ -19,16 +20,16 @@ export const initValue = (
   // Clone inputs
   const input = store.get(`i.${objKey}`);
 
-  if (type === "file") {
+  if (type === FILE) {
     [value].flat().forEach((v: Unknown, index: number) => {
       retrieveFile(v, store, objKey, index);
     });
     return;
   }
-  if (type === "radio") {
+  if (type === RADIO) {
     // Check right radio input
     setValue(input, input.value === value);
-  } else if (type === "checkbox") {
+  } else if (type === CHECKBOX) {
     // Toggle the checkbox input
     setValue(input, value.length ? value.includes(input.value) : value);
   } else {
@@ -46,35 +47,31 @@ export const nextChange = (
   store: InputStore,
   entry: ObjectInputs<string>,
   input: Input,
-  objKey: string,
-  type: string
-  // isEvent: boolean
+  objKey: string
 ) => {
-  if (type === "radio") {
-    // Check right radio input
-    for (const key in entry) {
-      const inp = entry[key];
-      if (inp.type === "radio" && inp.name === entry[objKey].name) {
-        setValue(inp, inp.value === value);
-        inp.valid = true;
-      }
-    }
-  } else if (type === "checkbox") {
+  const { name, checked, type } = input;
+  if (type === RADIO) {
+    // Check right radio input and make other valid
+    setCRValues(store, entry, name, (i) => setValue(i, i.value === value));
+  } else if (type === CHECKBOX) {
     // Toggle the checkbox input
-    setValue(entry[objKey], !entry[objKey].checked);
-    value = createCheckboxValue(entry, objKey);
+    setValue(input, !checked);
+    // Keep only selected checkbox
+    store.ev[name].s[!checked ? "add" : "delete"](value);
+    // Make checkbox valid and clear errorMessage
+    setCRValues(store, entry, name);
+    // Selected checkbox that can be validated
+    value = [...store.ev[name].s];
   } else {
-    setValue(entry[objKey], value, false);
+    setValue(input, value, false);
   }
-
-  const { v, em } = validate(store, entry, objKey, value);
   // we sync handlers
-  syncChanges(store, tem(entry, objKey, v, em));
+  syncChanges(store, tem(entry, objKey, validate(store, entry, objKey, value)));
   // run after changes
   const r = (input as InternalInput).afterChange;
   r &&
     r({
-      value: extractValues(store.get("i"))[input.name],
+      value: extractValues(store.get("i"))[name],
       input
     });
 };
@@ -83,11 +80,10 @@ export const nextChange = (
 export const tem = (
   entry: ObjectInputs<string>,
   objKey: string,
-  valid: boolean,
   em: Unknown
 ) => {
   entry[objKey].touched = true;
-  entry[objKey].valid = valid;
+  entry[objKey].valid = !em;
   entry[objKey].errorMessage = em;
   return entry;
 };
@@ -95,6 +91,7 @@ export const tem = (
 export const syncChanges = (store: InputStore, data: ObjectInputs<string>) => {
   store.set((ref) => {
     ref.i = data;
+    ref.t = true;
     ref.iv = validateState(data).iv;
   });
 };

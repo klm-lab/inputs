@@ -8,8 +8,16 @@ import type {
   Unknown
 } from "../types";
 import { validate, validateState } from "../inputs/validations";
-import { createCheckboxValue } from "../inputs/handlers/checkbox";
-import { Helper, keys, matchType } from "./helper";
+import {
+  CHECKBOX,
+  FILE,
+  newKey,
+  keys,
+  matchType,
+  RADIO,
+  SELECT,
+  STRING
+} from "./helper";
 import { createStore } from "aio-store/react";
 import { initValue, nextChange, tem } from "../inputs/handlers/changes";
 import { cleanFiles, createFiles } from "../inputs/handlers/files";
@@ -21,42 +29,37 @@ const createInput = (
   inp: Unknown,
   objKey: string
 ) => {
-  const key = store.h.key();
-  const isString = matchType(inp, "string");
+  const key = newKey();
+  const isString = matchType(inp, STRING);
   const { id, multiple, type, checked, validation = {} } = inp;
   const fIp = {
     id: id ?? key,
     name: isString ? inp : key,
     value:
-      type === "select" && multiple
+      type === SELECT && multiple
         ? []
-        : ["radio", "checkbox"].includes(type)
+        : [RADIO, CHECKBOX].includes(type)
         ? objKey
         : "",
     files: [],
     checked: false,
     valid: checked ? true : !keys(validation).length,
-    required: !!validation?.required,
     ...(isString ? {} : inp),
     key
   } as Input & GetValue;
 
   fIp.g = function (oldValue, data) {
     const { type, value, files, checked, name } = this;
-    if (type === "file") {
+    const ev = store.ev[name];
+    if (type === FILE) {
       return cleanFiles(files);
     }
-    if (type === "radio") {
+    if (type === RADIO) {
       return data ? "" : checked ? value : oldValue ?? "";
     }
-    if (type === "checkbox") {
-      if (data) {
-        return createCheckboxValue(data, objKey, false);
-      }
-      if (store.h.ev[name].c > 1) {
-        const v = oldValue || [];
-        checked && v.push(value);
-        return v;
+    if (type === CHECKBOX) {
+      if (data || ev.c > 1) {
+        return [...ev.s];
       }
       return checked;
     }
@@ -72,7 +75,7 @@ const createInput = (
       ? value.target.value || value.nativeEvent.text || ""
       : value;
 
-    if (type === "file") {
+    if (type === FILE) {
       entry[objKey].files = createFiles(
         isEvent ? new Set(value.target.files) : value,
         store,
@@ -82,7 +85,7 @@ const createInput = (
     }
 
     const values =
-      type === "select"
+      type === SELECT
         ? multiple
           ? createSelectFiles(
               isEvent ? new Set(value.target.selectedOptions) : value,
@@ -94,7 +97,7 @@ const createInput = (
           : ""
         : targetValue;
 
-    nextChange(values, store, entry, input, objKey, type);
+    nextChange(values, store, entry, input, objKey);
   };
   // Let user set value, type and data
   fIp.set = (prop, value, fileConfig = {}) => {
@@ -115,38 +118,43 @@ const createInput = (
   };
   fIp.props = {
     id: fIp.id,
+    accept: fIp.accept,
     name: fIp.name,
     type: fIp.type,
     value: fIp.value,
     checked: fIp.checked,
     multiple: fIp.multiple,
     placeholder: fIp.placeholder,
-    required: fIp.required,
     onChange: fIp.onChange
   } as InputProps;
 
-  const { name, errorMessage } = fIp;
-  // we save the error message and validation
-  const ev = store.h.ev[name] || {};
-  store.h.ev[name] = {
-    e: ev.e ?? errorMessage,
+  const { name } = fIp;
+  // we save the validation
+  const ev = store.ev[name] || {};
+  store.ev[name] = {
     v: ev.v ?? fIp.validation,
     // count inputs name
-    c: ev.c ? ev.c + 1 : 1
+    c: ev.c ? ev.c + 1 : 1,
+    s: new Set(),
+    o: ev.o ? ev.o.add(objKey) : new Set().add(objKey)
   };
   entry[objKey] = fIp;
   // Reset errorMessage
-  entry[objKey].errorMessage = errorMessage instanceof Object ? {} : undefined;
-
+  entry[objKey].errorMessage = null;
   return entry[objKey].valid;
 };
 
 export const finalizeInputs = (initialState: Unknown, config: InputConfig) => {
+  // create initial form
   const inf = {} as ObjectInputs<string>;
+  // create an empty store populated by createInput
   const st = createStore({}) as unknown as InputStore;
   let isValid = true;
-  st.h = Helper();
-  if (matchType(initialState, "string")) {
+  // init extra variables, validation, counter, objKey and checkbox values
+  st.ev = {};
+  // timeout async keys
+  st.a = {};
+  if (matchType(initialState, STRING)) {
     createInput(inf, st, initialState, initialState);
   } else {
     for (const stateKey in initialState) {
@@ -155,21 +163,27 @@ export const finalizeInputs = (initialState: Unknown, config: InputConfig) => {
     }
   }
   st.set((ref) => {
+    // all inputs
     ref.i = inf;
     ref.inv = isValid;
+    // initial valid state
     ref.iv = isValid;
     ref.c = config;
+    // isTouched
+    ref.t = false;
   });
   return { st, inf };
 };
 
 const touchInput = (store: InputStore) => {
   const data = store.get("i");
+  // invalid key
   const ik = validateState(data).ik;
   if (ik) {
     const input = data[ik] as Input & GetValue;
-    const { em } = validate(store, data, ik, input.g(input.value, data));
-    store.set((ref) => tem(ref.i, ik, false, em));
+    store.set((ref) =>
+      tem(ref.i, ik, validate(store, data, ik, input.g(input.value, data)))
+    );
   }
 };
 

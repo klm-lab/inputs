@@ -15,8 +15,8 @@ import { persist } from "../util/helper";
 import { extractValues } from "./handlers/values";
 
 export const compute = (initialState: Unknown, config: InputConfig) => {
-  if (config.persistID && persist[config.persistID]) {
-    return persist[config.persistID];
+  if (config.pid && persist[config.pid]) {
+    return persist[config.pid];
   }
   const { st, inf } = finalizeInputs(initialState, config);
 
@@ -57,8 +57,10 @@ export const compute = (initialState: Unknown, config: InputConfig) => {
           ...inf[key],
           data: ref.i[key].data
         };
+        st.ev[inf[key].name].s.clear();
       }
       ref.iv = st.get("inv");
+      ref.t = false;
     });
   };
 
@@ -80,8 +82,8 @@ export const compute = (initialState: Unknown, config: InputConfig) => {
     iv: () => st.get("iv")
   };
 
-  if (config.persistID) {
-    persist[config.persistID] = result;
+  if (config.pid) {
+    persist[config.pid] = result;
   }
   return result;
 };
