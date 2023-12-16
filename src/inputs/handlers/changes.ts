@@ -79,7 +79,7 @@ export const nextChange = (
     });
 };
 
-// Set touched, valid and error message
+// Set touched, valid and error message and return the entry (inputs)
 export const setValidAndEm = (
   entry: ObjectInputs<string>,
   objKey: string,

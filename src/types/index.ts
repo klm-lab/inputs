@@ -71,6 +71,8 @@ interface InternalInput {
   id?: string;
   accept?: string;
   name?: string;
+  min: number | string;
+  max: number | string;
   type?: HTMLInputTypeAttribute;
   label?: Unknown;
   value?: Unknown;

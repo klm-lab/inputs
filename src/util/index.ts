@@ -125,6 +125,8 @@ const createInput = (
     id: fIp.id,
     accept: fIp.accept,
     name: fIp.name,
+    min: fIp.min,
+    max: fIp.max,
     type: fIp.type,
     value: fIp.value,
     checked: fIp.checked,

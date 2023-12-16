@@ -99,24 +99,24 @@ export const parseFile = (
 export const retrieveFile = (
   value: Unknown,
   store: InputStore,
-  id: string,
+  objKey: string,
   index: number
 ) => {
   const fileConfig = store.fc;
   store.set((ref) => {
-    ref.i[id].files[index] = parseFile(
-      id,
+    ref.i[objKey].files[index] = parseFile(
+      objKey,
       store,
       value,
       !!fileConfig.getBlob, // true is getBlob is present
       {} as File
     );
-    ref.i[id].valid = true;
+    ref.i[objKey].valid = true;
   });
   if (fileConfig.getBlob) {
     Promise.resolve(fileConfig.getBlob(value)).then((r) => {
       store.set((ref) => {
-        const f = ref.i[id].files[index];
+        const f = ref.i[objKey].files[index];
         f.fetching = false;
         f.file = r as File;
       });
