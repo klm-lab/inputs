@@ -1,6 +1,6 @@
 {
   "name": "aio-inputs",
-  "version": "3.1.2",
+  "version": "3.1.3",
   "description": "An opinionated inputs state manager for react",
   "scripts": {
     "build": "npm ci && npm run build:noci",

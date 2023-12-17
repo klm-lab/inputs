@@ -1,29 +1,23 @@
 import { Unknown, ValidateInput } from "../../types";
 
-export const minLength = (minLength: number, em?: Unknown): ValidateInput => {
-  return ({ va }) => (va?.length >= minLength ? null : em);
+export const number = (errorMessage: Unknown): ValidateInput => {
+  return ({ va }) => (!!va && !isNaN(va) ? "" : errorMessage);
 };
 
-export const maxLength = (maxLength: number, em?: Unknown): ValidateInput => {
-  return ({ va }) => (va?.length <= maxLength ? null : em);
-};
-
-export const minLengthWithoutSpace = (
-  minLengthWithoutSpace: number,
-  em?: Unknown
+export const min = (
+  min: number,
+  errorMessage: Unknown,
+  number?: boolean
 ): ValidateInput => {
   return ({ va }) =>
-    va?.indexOf(" ") === -1 && va?.trim().length >= minLengthWithoutSpace
-      ? null
-      : em;
+    (number ? Number(va) : va.length) >= min ? "" : errorMessage;
 };
 
-export const maxLengthWithoutSpace = (
-  maxLengthWithoutSpace: number,
-  em?: Unknown
+export const max = (
+  max: number,
+  errorMessage: Unknown,
+  number?: boolean
 ): ValidateInput => {
   return ({ va }) =>
-    va?.indexOf(" ") === -1 && va?.trim().length <= maxLengthWithoutSpace
-      ? null
-      : em;
+    (number ? Number(va) : va.length) <= max ? "" : errorMessage;
 };

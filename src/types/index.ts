@@ -27,12 +27,12 @@ type HTMLInputTypeAttribute =
 type Unknown = any;
 
 interface CustomAsyncValidationType {
-  (value: Unknown): Promise<Unknown>;
+  (value: Unknown, onSuccess: (em: Unknown) => void, onError: () => void): void;
 }
 
 type ValidateInputParams = {
   // entry of inputs
-  i?: ObjectInputs<string>;
+  i: ObjectInputs<string>;
   // input
   ip: Input;
   // objkey
@@ -54,15 +54,8 @@ interface ValidationStateType {
   number?: ValidateInput;
   min?: ValidateInput;
   max?: ValidateInput;
-  minLength?: ValidateInput;
-  minLengthWithoutSpace?: ValidateInput;
-  maxLength?: ValidateInput;
-  maxLengthWithoutSpace?: ValidateInput;
   match?: ValidateInput;
-  startsWith?: ValidateInput;
-  endsWith?: ValidateInput;
-  regex?: ValidateInput;
-  copy?: ValidateInput;
+  // copy?: ValidateInput;
   custom?: (value: Unknown) => Unknown;
   asyncCustom?: ValidateInput;
 }
@@ -82,6 +75,7 @@ interface InternalInput {
   placeholder?: Unknown;
   validation?: ValidationStateType;
   data?: Unknown;
+  [k: string]: Unknown;
 
   afterChange?(params: { value: Unknown; input: Input }): void;
 }
@@ -101,20 +95,11 @@ interface ParsedFile {
   selfUpdate(data: Unknown): void;
 }
 
-type ValidateState = {
-  // invalid
-  iv: boolean;
-  // invalid key
-  ik: string | null;
-};
-
 // FOr some reason, Build-in Required doesn't work
 interface InputProps {
   id: string;
   accept: string;
   name: string;
-  min: number | string;
-  max: number | string;
   type: HTMLInputTypeAttribute;
   value: Unknown;
   checked: boolean;
@@ -122,6 +107,7 @@ interface InputProps {
   placeholder: Unknown;
 
   onChange(event: Unknown): void;
+  [k: string]: Unknown;
 }
 
 interface Input extends InputProps {
@@ -139,15 +125,15 @@ interface Input extends InputProps {
   set<P extends "data" | "type" | "value">(
     prop: P,
     value: Input[P],
-    fileConfig?: FileConfig
+    getFile?: GetFile
   ): void;
 
   props: InputProps;
   data: Unknown;
 }
 
-interface FileConfig {
-  getBlob?(url: string): Unknown;
+interface GetFile {
+  (url: string): Unknown;
 }
 
 type CreateObjectInputs<K> = {
@@ -204,7 +190,7 @@ type IPS = {
   c: InputConfig;
 };
 type InputStore = StoreType<IPS> & {
-  fc: FileConfig;
+  fc: GetFile;
   // async Delay key
   a: { [k in string]: Unknown };
   // extra variables, validation, counter, objKey and checkbox values
@@ -212,25 +198,20 @@ type InputStore = StoreType<IPS> & {
     [k in string]: {
       v: ValidationStateType;
       c: number;
-      // a set of value
+      // Initial selected values
+      i: Set<Unknown>;
+      // A set of selected value
       s: Set<Unknown>;
       // objkey bind to name
       o: Unknown[];
       // common objKey
       k: string;
+      // parsed Value
+      p?: Unknown;
     };
   };
   // all inputs name
   n: Unknown[];
-};
-type AsyncValidationParams = {
-  em?: Unknown;
-  // objkey
-  ok: string;
-  //store
-  st: InputStore;
-  // failed
-  f?: boolean;
 };
 
 interface CompForm extends CommonForm {
@@ -319,18 +300,16 @@ export type {
   InputConfig,
   Input,
   InputStore,
-  AsyncValidationParams,
   ObjectInputs,
   Computed,
   ParsedFile,
-  FileConfig,
+  GetFile,
   EachCallback,
   IsValid,
   CreateObjectInputs,
   ArrayInputs,
   CreateArrayInputs,
   InputProps,
-  ValidateState,
   ValidateInput,
   AsyncValidateInput,
   ValidateInputParams,

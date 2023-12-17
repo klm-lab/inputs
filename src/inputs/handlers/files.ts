@@ -20,6 +20,25 @@ export const createFiles = (
   return parsed;
 };
 
+// export const createFiles = (
+//   value: Unknown,
+//   store: InputStore,
+//   objKey: string,
+//   input: Input
+// ) => {
+//   const parsed: Unknown = input.merge ? { ...input.files } : {};
+//   if (!input.merge) {
+//     // revoke preview file url
+//     keys(input.files).forEach(R);
+//   }
+//   value.forEach((f: Unknown) => {
+//     // parse and add new file
+//     const url = C(f);
+//     parsed[url] = parseFile(objKey, store, url, false, f);
+//   });
+//   return parsed;
+// };
+
 // return result in r and files in f
 const filterOrFindIndex = (
   ref: IPS,
@@ -38,25 +57,25 @@ export const parseFile = (
   url: string,
   fetching: boolean,
   file: File
-): ParsedFile => {
+) => {
   const key = newKey();
   return {
     fetching,
     file,
     key,
     url,
-    update: null,
-    loaded: false,
+    // update: null,
+    // loaded: false,
     onLoad: () => {
       !store.get("c").pid && R(url);
       store.set((ref) => {
         // const index = ref.i[objKey].files.findIndex((f) => f.key === key);
-        const { r } = filterOrFindIndex(
+        const index = filterOrFindIndex(
           ref,
           objKey,
           (f: ParsedFile) => f.key === key
-        );
-        ref.i[objKey].files[r].loaded = true;
+        ).r;
+        ref.i[objKey].files[index].loaded = true;
       });
     },
     selfUpdate: (data: Unknown) => {
@@ -90,40 +109,11 @@ export const parseFile = (
         input.valid = !em;
         input.errorMessage = em;
         // Validate form
-        ref.iv = validateState(ref.i).iv;
+        ref.iv = validateState(ref.i);
       });
     }
-  };
+  } as ParsedFile;
 };
-
-export const retrieveFile = (
-  value: Unknown,
-  store: InputStore,
-  id: string,
-  index: number
-) => {
-  const fileConfig = store.fc;
-  store.set((ref) => {
-    ref.i[id].files[index] = parseFile(
-      id,
-      store,
-      value,
-      !!fileConfig.getBlob, // true is getBlob is present
-      {} as File
-    );
-    ref.i[id].valid = true;
-  });
-  if (fileConfig.getBlob) {
-    Promise.resolve(fileConfig.getBlob(value)).then((r) => {
-      store.set((ref) => {
-        const f = ref.i[id].files[index];
-        f.fetching = false;
-        f.file = r as File;
-      });
-    });
-  }
-};
-
 // Remove useless tools for db
 export const cleanFiles = (files: ParsedFile[]) => {
   // Set type to any to break the contract type

@@ -7,9 +7,8 @@ export const setCRValues = (
   fn?: (I: Input) => Unknown
 ) => {
   store.ev[name].o.forEach((c: string) => {
-    const inp = entry[c];
-    fn && fn(inp);
-    inp.valid = true;
-    inp.errorMessage = null;
+    fn && fn(entry[c]);
+    entry[c].valid = true;
+    entry[c].errorMessage = "";
   });
 };

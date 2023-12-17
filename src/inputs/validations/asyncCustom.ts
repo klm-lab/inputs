@@ -1,55 +1,49 @@
 import {
   AsyncValidateInput,
-  AsyncValidationParams,
-  CustomAsyncValidationType
+  CustomAsyncValidationType,
+  Unknown
 } from "../../types";
 import { syncChanges } from "../handlers/changes";
-
-const asyncCallback = ({ em, ok, st, f }: AsyncValidationParams) => {
-  // Clone inputs
-  const entry = st.get("i");
-  const input = entry[ok];
-  // Finish calling server
-  entry[ok].validating = false;
-  entry[ok].validationFailed = !!f;
-
-  if (f) {
-    syncChanges(st, entry);
-    return;
-  }
-  // Add server validation only actual data is valid
-  entry[ok].valid = input.errorMessage ? false : !em;
-  // Add server error message only actual data is valid else keep actual error Message
-  entry[ok].errorMessage = input.errorMessage ?? em;
-
-  // Sync handlers
-  syncChanges(st, entry);
-};
 
 export const asyncCustom = (
   callback: CustomAsyncValidationType
 ): AsyncValidateInput => {
-  return ({ va, ip, ok, st }) => {
+  return ({ i, va, ip, ok, st }) => {
     const timeoutKeys = st.a;
+    // clear previous task
     clearTimeout(timeoutKeys[ip.key]);
+    // new task with the input key
     timeoutKeys[ip.key] = setTimeout(
       () => {
-        // Save the time
+        // Save the time because, changes can happen before response
         const ST = timeoutKeys[ip.key];
-        Promise.resolve(callback(va))
-          .then((em) => {
-            /* we check if time match the request id time
-             * If not, that means, another request has been sent.
-             * So we wait for that response
-             * */
-            if (ST === timeoutKeys[ip.key]) {
-              asyncCallback({ em, ok, st });
-            }
-          })
-          .catch((error) => {
-            console.error(error);
-            asyncCallback({ f: true, ok, st });
-          });
+        const onError = () => {
+          i[ok].validating = false;
+          i[ok].validationFailed = true;
+          syncChanges(st, i);
+        };
+
+        const onSuccess = (errorMessage: Unknown) => {
+          /* we check if time match the request id time
+           * If not, that means, another request has been sent.
+           * So we wait for that response
+           * */
+          if (ST === timeoutKeys[ip.key]) {
+            // sync with latest inputs state
+            i = st.get(`i`);
+            // Get latest input errorMessage
+            const em = i[ok].errorMessage;
+            // Add server validation because it is always false before calling server
+            i[ok].valid = !errorMessage;
+            // Add server error message only if actual data is valid else keep actual error Message
+            // '' ?? 'not empty' is a js bug and will return '', so we go the other way
+            //i[ok].errorMessage = em ?? errorMessage;
+            i[ok].errorMessage = !em ? errorMessage : em;
+            i[ok].validating = false;
+            syncChanges(st, i);
+          }
+        };
+        callback(va, onSuccess, onError);
       },
       st.get("c.asyncDelay") ?? 800
     );
