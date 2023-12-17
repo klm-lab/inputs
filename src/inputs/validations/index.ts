@@ -13,7 +13,9 @@ const validate = (
   i: ObjectInputs<string>,
   // objectKey to find the input name and validation
   defaultObjKey: string,
+  // value
   va: Unknown,
+  // omitted rules
   omr = ["asyncCustom"],
   // objectKey to write the valid status
   realObjKey = defaultObjKey

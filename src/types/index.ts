@@ -55,10 +55,7 @@ interface ValidationStateType {
   min?: ValidateInput;
   max?: ValidateInput;
   match?: ValidateInput;
-  startsWith?: ValidateInput;
-  endsWith?: ValidateInput;
-  regex?: ValidateInput;
-  copy?: ValidateInput;
+  // copy?: ValidateInput;
   custom?: (value: Unknown) => Unknown;
   asyncCustom?: ValidateInput;
 }
