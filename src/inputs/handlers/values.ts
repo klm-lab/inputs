@@ -1,4 +1,5 @@
 import { type GetValue, Input, ObjectInputs, type Unknown } from "../../types";
+import { FILE } from "../../util/helper";
 
 export const extractValues = (state: ObjectInputs<string>) => {
   const result = {} as { [k in string]: Unknown };
@@ -13,7 +14,7 @@ export const setValue = (input: Input, value: Unknown, cr: boolean = true) => {
   if (cr) {
     input.checked = value;
     input.props.checked = value;
-  } else {
+  } else if (input.type !== FILE) {
     input.value = value;
     input.props.value = value;
   }

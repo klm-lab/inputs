@@ -54,10 +54,6 @@ interface ValidationStateType {
   number?: ValidateInput;
   min?: ValidateInput;
   max?: ValidateInput;
-  minLength?: ValidateInput;
-  minLengthWithoutSpace?: ValidateInput;
-  maxLength?: ValidateInput;
-  maxLengthWithoutSpace?: ValidateInput;
   match?: ValidateInput;
   startsWith?: ValidateInput;
   endsWith?: ValidateInput;
@@ -71,8 +67,6 @@ interface InternalInput {
   id?: string;
   accept?: string;
   name?: string;
-  min?: number | string;
-  max?: number | string;
   type?: HTMLInputTypeAttribute;
   label?: Unknown;
   value?: Unknown;
@@ -84,6 +78,7 @@ interface InternalInput {
   placeholder?: Unknown;
   validation?: ValidationStateType;
   data?: Unknown;
+  [k: string]: Unknown;
 
   afterChange?(params: { value: Unknown; input: Input }): void;
 }
@@ -103,20 +98,11 @@ interface ParsedFile {
   selfUpdate(data: Unknown): void;
 }
 
-type ValidateState = {
-  // invalid
-  iv: boolean;
-  // invalid key
-  ik: string;
-};
-
 // FOr some reason, Build-in Required doesn't work
 interface InputProps {
   id: string;
   accept: string;
   name: string;
-  min: number | string;
-  max: number | string;
   type: HTMLInputTypeAttribute;
   value: Unknown;
   checked: boolean;
@@ -124,6 +110,7 @@ interface InputProps {
   placeholder: Unknown;
 
   onChange(event: Unknown): void;
+  [k: string]: Unknown;
 }
 
 interface Input extends InputProps {
@@ -214,7 +201,9 @@ type InputStore = StoreType<IPS> & {
     [k in string]: {
       v: ValidationStateType;
       c: number;
-      // a set of value
+      // Initial selected values
+      i: Set<Unknown>;
+      // A set of selected value
       s: Set<Unknown>;
       // objkey bind to name
       o: Unknown[];
@@ -324,7 +313,6 @@ export type {
   ArrayInputs,
   CreateArrayInputs,
   InputProps,
-  ValidateState,
   ValidateInput,
   AsyncValidateInput,
   ValidateInputParams,

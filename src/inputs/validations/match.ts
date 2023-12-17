@@ -1,7 +1,7 @@
 import { Unknown, ValidateInput } from "../../types";
 import { validate } from "./index";
 
-export const match = (name: string, em?: Unknown): ValidateInput => {
+export const match = (name: string, errorMessage: Unknown): ValidateInput => {
   return ({ i, ok, st, va }) => {
     const objKey = st.ev[name].k;
 
@@ -20,7 +20,7 @@ export const match = (name: string, em?: Unknown): ValidateInput => {
     // }
 
     const error = validate(st, i, objKey, va, ["match"], ok);
-    const message = !error ? em : error;
+    const message = !error ? errorMessage : error;
     const valid = !error && va === i[objKey].value;
     i[objKey].valid = valid;
     i[objKey].errorMessage = valid ? "" : i[objKey].errorMessage;

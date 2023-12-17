@@ -76,7 +76,7 @@ export const nextChange = (
   // we sync handlers
   syncChanges(
     store,
-    setValidAndEm(entry, objKey, validate(store, entry, objKey, value))
+    setTouchedEm(entry, objKey, validate(store, entry, objKey, value))
   );
   // run after changes
   const r = (input as InternalInput).afterChange;
@@ -87,14 +87,13 @@ export const nextChange = (
     });
 };
 
-// Set touched, valid and error message and return the entry (inputs)
-export const setValidAndEm = (
+// Set touched, and error message and return the entry (inputs)
+export const setTouchedEm = (
   entry: ObjectInputs<string>,
   objKey: string,
   em: Unknown
 ) => {
   entry[objKey].touched = true;
-  entry[objKey].valid = !em;
   entry[objKey].errorMessage = em;
   return entry;
 };
@@ -106,6 +105,6 @@ export const syncChanges = (store: InputStore, data: ObjectInputs<string>) => {
     // isTouched
     ref.t = true;
     // new valid state
-    ref.iv = validateState(data).iv;
+    ref.iv = validateState(data);
   });
 };

@@ -1,6 +1,6 @@
 import { Unknown, ValidateInput } from "../../types";
 
-export const required = (em?: Unknown): ValidateInput => {
+export const required = (errorMessage: Unknown): ValidateInput => {
   return ({ va }) =>
-    !!va && va.indexOf(" ") === -1 && va.length > 0 ? "" : em;
+    !!va && (va.trim ? va.trim() !== "" : va.length > 0) ? "" : errorMessage;
 };

@@ -20,6 +20,25 @@ export const createFiles = (
   return parsed;
 };
 
+// export const createFiles = (
+//   value: Unknown,
+//   store: InputStore,
+//   objKey: string,
+//   input: Input
+// ) => {
+//   const parsed: Unknown = input.merge ? { ...input.files } : {};
+//   if (!input.merge) {
+//     // revoke preview file url
+//     keys(input.files).forEach(R);
+//   }
+//   value.forEach((f: Unknown) => {
+//     // parse and add new file
+//     const url = C(f);
+//     parsed[url] = parseFile(objKey, store, url, false, f);
+//   });
+//   return parsed;
+// };
+
 // return result in r and files in f
 const filterOrFindIndex = (
   ref: IPS,
@@ -90,7 +109,7 @@ export const parseFile = (
         input.valid = !em;
         input.errorMessage = em;
         // Validate form
-        ref.iv = validateState(ref.i).iv;
+        ref.iv = validateState(ref.i);
       });
     }
   } as ParsedFile;

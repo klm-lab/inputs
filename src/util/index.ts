@@ -2,12 +2,11 @@ import type {
   GetValue,
   Input,
   InputConfig,
-  InputProps,
   InputStore,
   ObjectInputs,
   Unknown
 } from "../types";
-import { validate, validateState } from "../inputs/validations";
+import { validate } from "../inputs/validations";
 import {
   CHECKBOX,
   FILE,
@@ -16,6 +15,7 @@ import {
   newKey,
   newSet,
   RADIO,
+  RESERVED,
   SELECT,
   STRING
 } from "./helper";
@@ -23,7 +23,7 @@ import { createStore } from "aio-store/react";
 import {
   initValue,
   nextChange,
-  setValidAndEm
+  setTouchedEm
 } from "../inputs/handlers/changes";
 import { cleanFiles, createFiles } from "../inputs/handlers/files";
 import { createSelectFiles } from "../inputs/handlers/select";
@@ -37,16 +37,16 @@ const createInput = (
 ) => {
   const key = newKey();
   const isString = matchType(inp, STRING);
-  const { id, multiple, type, checked, validation = {} } = inp;
+  const { id, multiple, type, checked } = inp;
   const fIp = {
     id: id ?? key,
     name: isString ? inp : key,
     value: type === SELECT && multiple ? [] : type === RADIO ? objKey : "",
     files: [],
     checked: false,
-    valid: checked ? true : !keys(validation).length,
     ...(isString ? {} : inp),
-    key
+    key,
+    props: {}
   } as Input & GetValue;
 
   fIp.g = function (oldValue, touching) {
@@ -74,20 +74,24 @@ const createInput = (
     const entry = store.get("i");
     const input = entry[objKey];
     const { type, placeholder, multiple } = input;
-    const targetValue = isEvent
+    let values = isEvent
       ? value.target.value || value.nativeEvent.text || ""
-      : value;
+      : value !== placeholder
+      ? value
+      : "";
 
     if (type === FILE) {
-      entry[objKey].files = createFiles(
+      const files = createFiles(
         isEvent ? newSet(value.target.files) : value,
         store,
         objKey,
         input
       );
+      entry[objKey].files = files;
+      values = files;
     }
 
-    const values =
+    values =
       type === SELECT
         ? multiple
           ? createSelectFiles(
@@ -95,10 +99,8 @@ const createInput = (
               input,
               isEvent
             )
-          : targetValue !== "" && targetValue !== placeholder
-          ? targetValue
-          : ""
-        : targetValue;
+          : values
+        : values;
 
     nextChange(values, store, entry, input, objKey);
   };
@@ -120,34 +122,29 @@ const createInput = (
       }
     });
   };
-  fIp.props = {
-    id: fIp.id,
-    accept: fIp.accept,
-    name: fIp.name,
-    min: fIp.min,
-    max: fIp.max,
-    type: fIp.type,
-    value: fIp.value,
-    checked: fIp.checked,
-    multiple: fIp.multiple,
-    placeholder: fIp.placeholder,
-    onChange: fIp.onChange
-  } as InputProps;
+
+  keys(fIp).forEach((k) => {
+    if (!RESERVED.has(k)) {
+      fIp.props[k] = fIp[k];
+    }
+  });
 
   const { name } = fIp;
   // we save the validation
   const ev = store.ev[name] || {};
+  const initialSelection = checked
+    ? ev.s
+      ? ev.s.add(fIp.value)
+      : newSet().add(fIp.value)
+    : ev.s ?? newSet();
   store.ev[name] = {
     // save validations
     v: ev.v ?? fIp.validation,
     // count inputs name
     c: ev.c ? ev.c + 1 : 1,
     // track selected value
-    s: checked
-      ? ev.s
-        ? ev.s.add(fIp.value)
-        : newSet().add(fIp.value)
-      : ev.s ?? newSet(),
+    s: initialSelection,
+    i: newSet(initialSelection),
     // save object keys for form.get, checkbox and radio value changes
     o: [...(ev.o ?? []), objKey],
     // save common objKey for copy and match validation
@@ -158,6 +155,15 @@ const createInput = (
   store.n = [...(store.n ?? []), name];
   // assign the final input
   entry[objKey] = fIp;
+  // validate input
+  fIp.valid = checked
+    ? true
+    : !validate(
+        store,
+        entry,
+        objKey,
+        [RADIO, CHECKBOX].includes(type) ? [...store.ev[name].s] : fIp.value
+      );
   // Reset errorMessage
   entry[objKey].errorMessage = "";
   return entry[objKey].valid;
@@ -197,17 +203,22 @@ export const finalizeInputs = (initialState: Unknown, config: InputConfig) => {
 
 const touchInput = (store: InputStore) => {
   const data = store.get("i");
-  // invalid key
-  const ik = validateState(data).ik;
-  if (ik) {
-    const input = data[ik] as Input & GetValue;
-    store.set((ref) =>
-      setValidAndEm(
-        ref.i,
-        ik,
-        validate(store, data, ik, input.g(input.value, true))
-      )
-    );
+  for (const key in data) {
+    if (!data[key].valid) {
+      store.set((ref) =>
+        setTouchedEm(
+          ref.i,
+          key,
+          validate(
+            store,
+            data,
+            key,
+            (data[key] as Input & GetValue).g(data[key].value, true)
+          )
+        )
+      );
+      break;
+    }
   }
 };
 

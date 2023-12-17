@@ -6,7 +6,7 @@ import {
   Unknown
 } from "../types";
 import { finalizeInputs, touchInput, transformToArray } from "../util";
-import { persist } from "../util/helper";
+import { newSet, persist } from "../util/helper";
 import { extractValues } from "./handlers/values";
 
 export const createInputs = (initialState: Unknown, config: InputConfig) => {
@@ -45,8 +45,9 @@ export const createInputs = (initialState: Unknown, config: InputConfig) => {
   const reset = () => {
     // clear possibly checkbox value
     // st.n => contains all inputs names
+    // st.i => contains all initial selected value
     // st.ev => contains all inputs extra data and validation like total of inputs, selected inputs etc...
-    st.n.forEach((n: string) => st.ev[n].s.clear());
+    st.n.forEach((n: string) => (st.ev[n].s = newSet(st.ev[n].i)));
     // reset with initial value
     st.set((ref) => {
       // ref.i => is the inputs

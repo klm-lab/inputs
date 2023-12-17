@@ -10,6 +10,18 @@ export const newSet = (p?: Unknown): Set<Unknown> => new Set(p);
 export const persist = {} as { [k in string]: Computed };
 
 export const keys = Object.keys;
+export const RESERVED = newSet([
+  "props",
+  "label",
+  "merge",
+  "valid",
+  "touched",
+  "validation",
+  "data",
+  "afterChange",
+  "g",
+  "set"
+]);
 export const CHECKBOX = "checkbox";
 export const RADIO = "radio";
 export const STRING = "string";

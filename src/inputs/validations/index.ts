@@ -4,7 +4,6 @@ import {
   ObjectInputs,
   Unknown,
   ValidateInputParams,
-  ValidateState,
   ValidationResult
 } from "../../types";
 import { keys, newSet } from "../../util/helper";
@@ -12,18 +11,20 @@ import { keys, newSet } from "../../util/helper";
 const validate = (
   st: InputStore,
   i: ObjectInputs<string>,
-  ok: string,
+  // objectKey to find the input name and validation
+  defaultObjKey: string,
   va: Unknown,
   omr = ["asyncCustom"],
-  o = ok
+  // objectKey to write the valid status
+  realObjKey = defaultObjKey
 ): ValidationResult => {
-  const ip: Input = i[ok];
+  const ip: Input = i[defaultObjKey];
   const rules = st.ev[ip.name].v;
   let em: Unknown = "";
   if (!rules) {
     return em;
   }
-  const params = { i, st, ip, ok: o, va, omr } as ValidateInputParams;
+  const params = { i, st, ip, ok: realObjKey, va, omr } as ValidateInputParams;
 
   newSet(keys(rules)).forEach((r: Unknown) => {
     if (em) {
@@ -34,9 +35,13 @@ const validate = (
       em = r === "custom" ? f(va) : f(params);
     }
   });
+  // set the valid status
+  i[realObjKey].valid = !em;
 
   if (!em && rules.asyncCustom) {
-    i[ok].validating = true;
+    // make it invalid because an async validation is present
+    i[realObjKey].valid = false;
+    i[realObjKey].validating = true;
     rules.asyncCustom(params);
   }
 
@@ -44,17 +49,15 @@ const validate = (
 };
 
 // Validate the state
-const validateState = (data: ObjectInputs<string>): ValidateState => {
-  let iv = true;
-  let ik = "";
+const validateState = (data: ObjectInputs<string>) => {
+  let valid = true;
   for (const formKey in data) {
-    if (!iv) {
+    if (!valid) {
       break;
     }
-    iv = data[formKey].valid;
-    ik = formKey;
+    valid = data[formKey].valid;
   }
-  return { iv, ik };
+  return valid;
 };
 
 export { validate, validateState };

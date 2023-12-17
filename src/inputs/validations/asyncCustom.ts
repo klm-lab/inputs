@@ -23,7 +23,7 @@ export const asyncCustom = (
           syncChanges(st, i);
         };
 
-        const onSuccess = (em: Unknown) => {
+        const onSuccess = (errorMessage: Unknown) => {
           /* we check if time match the request id time
            * If not, that means, another request has been sent.
            * So we wait for that response
@@ -32,11 +32,13 @@ export const asyncCustom = (
             // sync with latest inputs state
             i = st.get(`i`);
             // Get latest input errorMessage
-            const errorMessage = i[ok].errorMessage;
-            // Add server validation only if actual data is valid (no errorMessage is present)
-            i[ok].valid = errorMessage ? false : !em;
+            const em = i[ok].errorMessage;
+            // Add server validation because it is always false before calling server
+            i[ok].valid = !errorMessage;
             // Add server error message only if actual data is valid else keep actual error Message
-            i[ok].errorMessage = errorMessage ?? em;
+            // '' ?? 'not empty' is a js bug and will return '', so we go the other way
+            //i[ok].errorMessage = em ?? errorMessage;
+            i[ok].errorMessage = !em ? errorMessage : em;
             i[ok].validating = false;
             syncChanges(st, i);
           }
