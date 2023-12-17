@@ -3,10 +3,10 @@ import { validate } from "./index";
 
 export const match = (name: string, em?: Unknown): ValidateInput => {
   return ({ i, ok, st, va }) => {
-    const key = st.ev[name].k;
+    const objKey = st.ev[name].k;
 
-    if (!key) {
-      return null;
+    if (!objKey) {
+      return "";
     }
     // if (!entry![inputId].validation.match) {
     //   entry![inputId].validation.match = ({
@@ -19,11 +19,11 @@ export const match = (name: string, em?: Unknown): ValidateInput => {
     //   };
     // }
 
-    const error = validate(st, i!, key, va, ["match"], ok);
+    const error = validate(st, i, objKey, va, ["match"], ok);
     const message = !error ? em : error;
-    const valid = !error && va === i![key].value;
-    i![key].valid = valid;
-    i![key].errorMessage = valid ? null : i![key].errorMessage;
-    return valid ? null : message;
+    const valid = !error && va === i[objKey].value;
+    i[objKey].valid = valid;
+    i[objKey].errorMessage = valid ? "" : i[objKey].errorMessage;
+    return valid ? "" : message;
   };
 };

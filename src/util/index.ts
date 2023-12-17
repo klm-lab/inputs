@@ -103,12 +103,11 @@ const createInput = (
     nextChange(values, store, entry, input, objKey);
   };
   // Let user set value, type and data
-  fIp.set = (prop, value, fileConfig = {}) => {
+  fIp.set = (prop, value, getFile) => {
     store.set((ref) => {
       const input = ref.i[objKey];
       if (prop === "value") {
-        store.fc = fileConfig;
-        initValue(objKey, value, store, input.type);
+        initValue(objKey, value, store, input.type, getFile);
       }
       if (prop === "type") {
         input.type = value;
@@ -144,18 +143,23 @@ const createInput = (
     // count inputs name
     c: ev.c ? ev.c + 1 : 1,
     // track selected value
-    s: newSet(),
+    s: checked
+      ? ev.s
+        ? ev.s.add(fIp.value)
+        : newSet().add(fIp.value)
+      : ev.s ?? newSet(),
     // save object keys for form.get, checkbox and radio value changes
     o: [...(ev.o ?? []), objKey],
     // save common objKey for copy and match validation
     k: objKey
   };
+
   // save all name for reset function
   store.n = [...(store.n ?? []), name];
   // assign the final input
   entry[objKey] = fIp;
   // Reset errorMessage
-  entry[objKey].errorMessage = null;
+  entry[objKey].errorMessage = "";
   return entry[objKey].valid;
 };
 

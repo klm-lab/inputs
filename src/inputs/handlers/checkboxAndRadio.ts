@@ -9,6 +9,6 @@ export const setCRValues = (
   store.ev[name].o.forEach((c: string) => {
     fn && fn(entry[c]);
     entry[c].valid = true;
-    entry[c].errorMessage = null;
+    entry[c].errorMessage = "";
   });
 };

@@ -19,7 +19,7 @@ const validate = (
 ): ValidationResult => {
   const ip: Input = i[ok];
   const rules = st.ev[ip.name].v;
-  let em: Unknown = null;
+  let em: Unknown = "";
   if (!rules) {
     return em;
   }
@@ -46,7 +46,7 @@ const validate = (
 // Validate the state
 const validateState = (data: ObjectInputs<string>): ValidateState => {
   let iv = true;
-  let ik = null;
+  let ik = "";
   for (const formKey in data) {
     if (!iv) {
       break;

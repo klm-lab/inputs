@@ -6,5 +6,5 @@ export const copy = (
   omittedRules?: (keyof ValidationStateType)[]
 ): ValidateInput => {
   return ({ i, ok, st, va, omr }) =>
-    validate(st, i!, st.ev[name].k, va, omittedRules ?? omr, ok);
+    validate(st, i, st.ev[name].k, va, omittedRules ?? omr, ok);
 };

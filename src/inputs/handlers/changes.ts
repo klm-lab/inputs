@@ -1,4 +1,5 @@
 import {
+  GetFile,
   Input,
   InputStore,
   InternalInput,
@@ -7,7 +8,7 @@ import {
 } from "../../types";
 import { validate, validateState } from "../validations";
 import { extractValues, setValue } from "./values";
-import { retrieveFile } from "./files";
+import { parseFile } from "./files";
 import { CHECKBOX, FILE, RADIO } from "../../util/helper";
 import { setCRValues } from "./checkboxAndRadio";
 
@@ -15,18 +16,24 @@ export const initValue = (
   objKey: string,
   value: Unknown,
   store: InputStore,
-  type: string
+  type: string,
+  getFile?: GetFile
 ) => {
   // Clone inputs
   const input = store.get(`i.${objKey}`);
-
   if (type === FILE) {
     [value].flat().forEach((v: Unknown, index: number) => {
-      retrieveFile(v, store, objKey, index);
+      input.files[index] = parseFile(objKey, store, v, !!getFile, {} as File);
+      getFile &&
+        getFile(v).then((r: Unknown) => {
+          store.set((ref) => {
+            const f = ref.i[objKey].files[index];
+            f.fetching = false;
+            f.file = r as File;
+          });
+        });
     });
-    return;
-  }
-  if (type === RADIO) {
+  } else if (type === RADIO) {
     // Check right radio input
     setValue(input, input.value === value);
   } else if (type === CHECKBOX) {
@@ -65,6 +72,7 @@ export const nextChange = (
   } else {
     setValue(input, value, false);
   }
+  entry[objKey].validationFailed = false;
   // we sync handlers
   syncChanges(
     store,

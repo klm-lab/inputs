@@ -27,12 +27,12 @@ type HTMLInputTypeAttribute =
 type Unknown = any;
 
 interface CustomAsyncValidationType {
-  (value: Unknown): Promise<Unknown>;
+  (value: Unknown, onSuccess: (em: Unknown) => void, onError: () => void): void;
 }
 
 type ValidateInputParams = {
   // entry of inputs
-  i?: ObjectInputs<string>;
+  i: ObjectInputs<string>;
   // input
   ip: Input;
   // objkey
@@ -71,8 +71,8 @@ interface InternalInput {
   id?: string;
   accept?: string;
   name?: string;
-  min: number | string;
-  max: number | string;
+  min?: number | string;
+  max?: number | string;
   type?: HTMLInputTypeAttribute;
   label?: Unknown;
   value?: Unknown;
@@ -107,7 +107,7 @@ type ValidateState = {
   // invalid
   iv: boolean;
   // invalid key
-  ik: string | null;
+  ik: string;
 };
 
 // FOr some reason, Build-in Required doesn't work
@@ -141,15 +141,15 @@ interface Input extends InputProps {
   set<P extends "data" | "type" | "value">(
     prop: P,
     value: Input[P],
-    fileConfig?: FileConfig
+    getFile?: GetFile
   ): void;
 
   props: InputProps;
   data: Unknown;
 }
 
-interface FileConfig {
-  getBlob?(url: string): Unknown;
+interface GetFile {
+  (url: string): Unknown;
 }
 
 type CreateObjectInputs<K> = {
@@ -206,7 +206,7 @@ type IPS = {
   c: InputConfig;
 };
 type InputStore = StoreType<IPS> & {
-  fc: FileConfig;
+  fc: GetFile;
   // async Delay key
   a: { [k in string]: Unknown };
   // extra variables, validation, counter, objKey and checkbox values
@@ -220,19 +220,12 @@ type InputStore = StoreType<IPS> & {
       o: Unknown[];
       // common objKey
       k: string;
+      // parsed Value
+      p?: Unknown;
     };
   };
   // all inputs name
   n: Unknown[];
-};
-type AsyncValidationParams = {
-  em?: Unknown;
-  // objkey
-  ok: string;
-  //store
-  st: InputStore;
-  // failed
-  f?: boolean;
 };
 
 interface CompForm extends CommonForm {
@@ -321,11 +314,10 @@ export type {
   InputConfig,
   Input,
   InputStore,
-  AsyncValidationParams,
   ObjectInputs,
   Computed,
   ParsedFile,
-  FileConfig,
+  GetFile,
   EachCallback,
   IsValid,
   CreateObjectInputs,
