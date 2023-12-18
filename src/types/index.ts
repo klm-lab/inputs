@@ -196,6 +196,7 @@ type InputStore = StoreType<IPS> & {
   // extra variables, validation, counter, objKey and checkbox values
   ev: {
     [k in string]: {
+      a?: (params: { value: Unknown; input: Input }) => void;
       v: ValidationStateType;
       c: number;
       // Initial selected values
@@ -284,7 +285,7 @@ interface TrackInputs {
 }
 
 interface GetValue {
-  g(oldValue: Unknown, touching?: boolean): Unknown;
+  g(previousValue?: Unknown, touching?: boolean): Unknown;
 }
 
 export type {

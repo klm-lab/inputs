@@ -25,7 +25,7 @@ import {
   nextChange,
   setTouchedEm
 } from "../inputs/handlers/changes";
-import { cleanFiles, createFiles } from "../inputs/handlers/files";
+import { createFiles } from "../inputs/handlers/files";
 import { createSelectFiles } from "../inputs/handlers/select";
 
 const createInput = (
@@ -37,7 +37,7 @@ const createInput = (
 ) => {
   const key = newKey();
   const isString = matchType(inp, STRING);
-  const { id, multiple, type, checked } = inp;
+  const { id, multiple, type, afterChange, validation } = inp;
   const fIp = {
     id: id ?? key,
     name: isString ? inp : key,
@@ -49,14 +49,14 @@ const createInput = (
     props: {}
   } as Input & GetValue;
 
-  fIp.g = function (oldValue, touching) {
+  fIp.g = function (previousValue, touching) {
     const { type, value, files, checked, name } = this;
     const ev = store.ev[name];
     if (type === FILE) {
-      return cleanFiles(files);
+      return files.map((f) => ({ file: f.file, update: f.update }));
     }
     if (type === RADIO) {
-      return touching ? "" : checked ? value : oldValue ?? "";
+      return touching ? "" : checked ? value : previousValue ?? "";
     }
     if (type === CHECKBOX) {
       // multiple checkbox
@@ -106,6 +106,7 @@ const createInput = (
   };
   // Let user set value, type and data
   fIp.set = (prop, value, getFile) => {
+    // console.log(this);
     store.set((ref) => {
       const input = ref.i[objKey];
       if (prop === "value") {
@@ -129,17 +130,19 @@ const createInput = (
     }
   });
 
-  const { name } = fIp;
+  const { name, checked, value } = fIp;
   // we save the validation
   const ev = store.ev[name] || {};
   const initialSelection = checked
     ? ev.s
-      ? ev.s.add(fIp.value)
-      : newSet().add(fIp.value)
+      ? ev.s.add(value)
+      : newSet().add(value)
     : ev.s ?? newSet();
   store.ev[name] = {
+    // save afterChange
+    a: afterChange,
     // save validations
-    v: ev.v ?? fIp.validation,
+    v: ev.v ?? validation,
     // count inputs name
     c: ev.c ? ev.c + 1 : 1,
     // track selected value
@@ -155,14 +158,16 @@ const createInput = (
   store.n = [...(store.n ?? []), name];
   // assign the final input
   entry[objKey] = fIp;
-  // validate input
+  // validate input, maybe some default value has been set
   fIp.valid = checked
     ? true
+    : validation?.match || validation?.asyncCustom
+    ? false
     : !validate(
         store,
         entry,
         objKey,
-        [RADIO, CHECKBOX].includes(type) ? [...store.ev[name].s] : fIp.value
+        [RADIO, CHECKBOX].includes(type) ? [...store.ev[name].s] : value
       );
   // Reset errorMessage
   entry[objKey].errorMessage = "";
@@ -213,7 +218,8 @@ const touchInput = (store: InputStore) => {
             store,
             data,
             key,
-            (data[key] as Input & GetValue).g(data[key].value, true)
+            //  (data[key] as Input & GetValue).g(data[key].value, true)
+            (data[key] as Input & GetValue).g("", true)
           )
         )
       );
