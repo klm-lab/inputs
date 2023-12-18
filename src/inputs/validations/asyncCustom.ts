@@ -1,6 +1,7 @@
 import {
   AsyncValidateInput,
   CustomAsyncValidationType,
+  ObjectInputs,
   Unknown
 } from "../../types";
 import { syncChanges } from "../handlers/changes";
@@ -8,7 +9,8 @@ import { syncChanges } from "../handlers/changes";
 export const asyncCustom = (
   callback: CustomAsyncValidationType
 ): AsyncValidateInput => {
-  return ({ i, va, ip, ok, st }) => {
+  return ({ va, ip, ok, st }) => {
+    let latestInputsState = {} as ObjectInputs<string>;
     const timeoutKeys = st.a;
     // clear previous task
     clearTimeout(timeoutKeys[ip.key]);
@@ -18,9 +20,11 @@ export const asyncCustom = (
         // Save the time because, changes can happen before response
         const ST = timeoutKeys[ip.key];
         const onError = () => {
-          i[ok].validating = false;
-          i[ok].validationFailed = true;
-          syncChanges(st, i);
+          // sync latest inputs state
+          latestInputsState = st.get(`i`);
+          latestInputsState[ok].validating = false;
+          latestInputsState[ok].validationFailed = true;
+          syncChanges(st, latestInputsState);
         };
 
         const onSuccess = (errorMessage: Unknown) => {
@@ -29,18 +33,18 @@ export const asyncCustom = (
            * So we wait for that response
            * */
           if (ST === timeoutKeys[ip.key]) {
-            // sync with latest inputs state
-            i = st.get(`i`);
+            // get latest inputs state
+            latestInputsState = st.get(`i`);
             // Get latest input errorMessage
-            const em = i[ok].errorMessage;
+            const em = latestInputsState[ok].errorMessage;
             // Add server validation because it is always false before calling server
-            i[ok].valid = !errorMessage;
+            latestInputsState[ok].valid = !errorMessage;
             // Add server error message only if actual data is valid else keep actual error Message
             // '' ?? 'not empty' is a js bug and will return '', so we go the other way
             //i[ok].errorMessage = em ?? errorMessage;
-            i[ok].errorMessage = !em ? errorMessage : em;
-            i[ok].validating = false;
-            syncChanges(st, i);
+            latestInputsState[ok].errorMessage = !em ? errorMessage : em;
+            latestInputsState[ok].validating = false;
+            syncChanges(st, latestInputsState);
           }
         };
         callback(va, onSuccess, onError);

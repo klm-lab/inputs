@@ -1,8 +1,15 @@
-import { GetFile, Input, InputStore, ObjectInputs, Unknown } from "../../types";
+import {
+  GetFile,
+  GetValue,
+  Input,
+  InputStore,
+  ObjectInputs,
+  Unknown
+} from "../../types";
 import { validate, validateState } from "../validations";
-import { extractValues, setValue } from "./values";
+import { setValue } from "./values";
 import { parseFile } from "./files";
-import { CHECKBOX, FILE, RADIO } from "../../util/helper";
+import { CHECKBOX, FILE, newSet, RADIO } from "../../util/helper";
 import { setCRValues } from "./checkboxAndRadio";
 
 export const initValue = (
@@ -31,7 +38,11 @@ export const initValue = (
     setValue(input, input.value === value);
   } else if (type === CHECKBOX) {
     // Toggle the checkbox input
-    setValue(input, value.length ? value.includes(input.value) : value);
+    const checked = value.length ? value.includes(input.value) : value;
+    setValue(input, checked);
+    if (checked && value.length) {
+      store.ev[input.name].s = newSet(value);
+    }
   } else {
     setValue(input, value, false);
   }
@@ -75,7 +86,8 @@ export const nextChange = (
   const r = store.ev[name].a;
   r &&
     r({
-      value: extractValues(store.get("i"))[name],
+      value: (input as Input & GetValue).g(),
+      //value: extractValues(store.get("i"))[name],
       input
     });
 };

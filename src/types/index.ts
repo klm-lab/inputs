@@ -285,7 +285,7 @@ interface TrackInputs {
 }
 
 interface GetValue {
-  g(oldValue: Unknown, touching?: boolean): Unknown;
+  g(previousValue?: Unknown, touching?: boolean): Unknown;
 }
 
 export type {

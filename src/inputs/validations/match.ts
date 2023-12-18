@@ -18,7 +18,6 @@ export const match = (name: string, errorMessage: Unknown): ValidateInput => {
     //     return { valid, em: helper.em[inputId] };
     //   };
     // }
-
     const error = validate(st, i, objKey, va, ["match"], ok);
     const message = !error ? errorMessage : error;
     const valid = !error && va === i[objKey].value;

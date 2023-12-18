@@ -6,30 +6,18 @@ export const createFiles = (
   value: Unknown,
   store: InputStore,
   objKey: string,
-  input: Input
+  { files, merge }: Input
 ) => {
-  const parsed: ParsedFile[] = input.merge ? [...input.files] : [];
-  if (!input.merge) {
+  const parsed: ParsedFile[] = merge ? [...files] : [];
+  if (!merge) {
     // revoke preview file url
-    input.files.forEach((p) => R(p.url));
+    files.forEach((p) => R(p.url));
   }
-  value.forEach((f: Unknown) => {
+  value.forEach((f: File) => {
     // parse and add new file
     parsed.push(parseFile(objKey, store, C(f), false, f));
   });
   return parsed;
-};
-
-// return result in r and files in f
-const filterOrFindIndex = (
-  ref: IPS,
-  objKey: string,
-  cb: Unknown,
-  ac: string = "findIndex"
-) => {
-  const f = ref.i[objKey].files;
-  const r = (f as Unknown)[ac](cb);
-  return { f, r };
 };
 
 export const parseFile = (
@@ -40,19 +28,26 @@ export const parseFile = (
   file: File
 ) => {
   const key = newKey();
+  const filterOrFindIndex = (
+    ref: IPS,
+    cb: Unknown,
+    ac: string = "findIndex"
+  ) => {
+    const f = ref.i[objKey].files;
+    // return result in r and files in f
+    return { f, r: (f as Unknown)[ac](cb) };
+  };
   return {
     fetching,
     file,
     key,
     url,
-    // update: null,
-    // loaded: false,
     onLoad: () => {
       !store.get(`c.pid`) && R(url);
       store.set((ref) => {
         // const index = ref.i[objKey].files.findIndex((f) => f.key === key);
         ref.i[objKey].files[
-          filterOrFindIndex(ref, objKey, (f: ParsedFile) => f.key === key).r
+          filterOrFindIndex(ref, (f: ParsedFile) => f.key === key).r
         ].loaded = true;
       });
     },
@@ -60,7 +55,6 @@ export const parseFile = (
       store.set((ref) => {
         const { f, r } = filterOrFindIndex(
           ref,
-          objKey,
           (f: ParsedFile) => f.key === key
         );
         // const files = ref.i[objKey].files;
@@ -77,7 +71,6 @@ export const parseFile = (
         // const newFiles = files.filter((f) => f.key !== key);
         const files = filterOrFindIndex(
           ref,
-          objKey,
           (f: ParsedFile) => f.key !== key,
           "filter"
         ).r;
@@ -91,22 +84,4 @@ export const parseFile = (
       });
     }
   } as ParsedFile;
-};
-// Remove useless tools for db
-export const cleanFiles = (files: ParsedFile[]) => {
-  // Set type to any to break the contract type
-  return files.map((f: any) => {
-    [
-      "selfRemove",
-      "selfUpdate",
-      "key",
-      "fetching",
-      "loaded",
-      "url",
-      "onLoad"
-    ].forEach((k) => {
-      delete f[k];
-    });
-    return f;
-  });
 };
