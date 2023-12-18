@@ -37,7 +37,7 @@ const createInput = (
 ) => {
   const key = newKey();
   const isString = matchType(inp, STRING);
-  const { id, multiple, type, checked } = inp;
+  const { id, multiple, type, checked, afterChange, validation } = inp;
   const fIp = {
     id: id ?? key,
     name: isString ? inp : key,
@@ -138,8 +138,10 @@ const createInput = (
       : newSet().add(fIp.value)
     : ev.s ?? newSet();
   store.ev[name] = {
+    // save afterChange
+    a: afterChange,
     // save validations
-    v: ev.v ?? fIp.validation,
+    v: ev.v ?? validation,
     // count inputs name
     c: ev.c ? ev.c + 1 : 1,
     // track selected value
@@ -153,17 +155,19 @@ const createInput = (
 
   // save all name for reset function
   store.n = [...(store.n ?? []), name];
-  // assign the final input
-  entry[objKey] = fIp;
   // validate input
   fIp.valid = checked
     ? true
+    : validation?.match
+    ? false
     : !validate(
         store,
         entry,
         objKey,
         [RADIO, CHECKBOX].includes(type) ? [...store.ev[name].s] : fIp.value
       );
+  // assign the final input
+  entry[objKey] = fIp;
   // Reset errorMessage
   entry[objKey].errorMessage = "";
   return entry[objKey].valid;

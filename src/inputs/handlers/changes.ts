@@ -1,11 +1,4 @@
-import {
-  GetFile,
-  Input,
-  InputStore,
-  InternalInput,
-  ObjectInputs,
-  Unknown
-} from "../../types";
+import { GetFile, Input, InputStore, ObjectInputs, Unknown } from "../../types";
 import { validate, validateState } from "../validations";
 import { extractValues, setValue } from "./values";
 import { parseFile } from "./files";
@@ -79,7 +72,7 @@ export const nextChange = (
     setTouchedEm(entry, objKey, validate(store, entry, objKey, value))
   );
   // run after changes
-  const r = (input as InternalInput).afterChange;
+  const r = store.ev[name].a;
   r &&
     r({
       value: extractValues(store.get("i"))[name],

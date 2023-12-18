@@ -3,7 +3,7 @@ import { validate } from "./index";
 
 export const match = (name: string, errorMessage: Unknown): ValidateInput => {
   return ({ i, ok, st, va }) => {
-    const objKey = st.ev[name].k;
+    const objKey = st.ev[name]?.k;
 
     if (!objKey) {
       return "";

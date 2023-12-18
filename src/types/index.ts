@@ -196,6 +196,7 @@ type InputStore = StoreType<IPS> & {
   // extra variables, validation, counter, objKey and checkbox values
   ev: {
     [k in string]: {
+      a?: (params: { value: Unknown; input: Input }) => void;
       v: ValidationStateType;
       c: number;
       // Initial selected values

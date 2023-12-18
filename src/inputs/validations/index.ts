@@ -16,7 +16,7 @@ const validate = (
   // value
   va: Unknown,
   // omitted rules
-  omr = ["asyncCustom"],
+  omr: string[] = [],
   // objectKey to write the valid status
   realObjKey = defaultObjKey
 ): ValidationResult => {
@@ -32,6 +32,8 @@ const validate = (
     if (em) {
       return;
     }
+    // always exclude asyncCustom
+    //  if (!["asyncCustom", ...omr].includes(r)) {
     if (!omr.includes(r)) {
       const f = (rules as Unknown)[r];
       em = r === "custom" ? f(va) : f(params);
@@ -44,7 +46,7 @@ const validate = (
     // make it invalid because an async validation is present
     i[realObjKey].valid = false;
     i[realObjKey].validating = true;
-    rules.asyncCustom(params);
+    //  rules.asyncCustom(params);
   }
 
   return em;

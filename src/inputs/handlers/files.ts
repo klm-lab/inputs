@@ -20,25 +20,6 @@ export const createFiles = (
   return parsed;
 };
 
-// export const createFiles = (
-//   value: Unknown,
-//   store: InputStore,
-//   objKey: string,
-//   input: Input
-// ) => {
-//   const parsed: Unknown = input.merge ? { ...input.files } : {};
-//   if (!input.merge) {
-//     // revoke preview file url
-//     keys(input.files).forEach(R);
-//   }
-//   value.forEach((f: Unknown) => {
-//     // parse and add new file
-//     const url = C(f);
-//     parsed[url] = parseFile(objKey, store, url, false, f);
-//   });
-//   return parsed;
-// };
-
 // return result in r and files in f
 const filterOrFindIndex = (
   ref: IPS,
@@ -67,15 +48,12 @@ export const parseFile = (
     // update: null,
     // loaded: false,
     onLoad: () => {
-      !store.get("c").pid && R(url);
+      !store.get(`c.pid`) && R(url);
       store.set((ref) => {
         // const index = ref.i[objKey].files.findIndex((f) => f.key === key);
-        const index = filterOrFindIndex(
-          ref,
-          objKey,
-          (f: ParsedFile) => f.key === key
-        ).r;
-        ref.i[objKey].files[index].loaded = true;
+        ref.i[objKey].files[
+          filterOrFindIndex(ref, objKey, (f: ParsedFile) => f.key === key).r
+        ].loaded = true;
       });
     },
     selfUpdate: (data: Unknown) => {
@@ -97,15 +75,15 @@ export const parseFile = (
         const input = ref.i[objKey];
         // const files = ref.i[objKey].files;
         // const newFiles = files.filter((f) => f.key !== key);
-        const { r } = filterOrFindIndex(
+        const files = filterOrFindIndex(
           ref,
           objKey,
           (f: ParsedFile) => f.key !== key,
           "filter"
-        );
+        ).r;
         // Validate input
-        const em = validate(store, entry, objKey, r);
-        input.files = r;
+        const em = validate(store, entry, objKey, files);
+        input.files = files;
         input.valid = !em;
         input.errorMessage = em;
         // Validate form
