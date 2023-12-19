@@ -160,7 +160,7 @@ interface IsValid {
   isTouched: boolean;
 }
 
-interface CommonForm {
+interface Form {
   reset(): void;
 
   each(callback: EachCallback): Unknown[];
@@ -168,17 +168,16 @@ interface CommonForm {
   showError(): void;
 
   get(name: string): Input[];
+
+  getValues(): Unknown;
+
+  onSubmit(event: Event): void;
 }
 
 interface EachCallback {
   (input: Input, index: number, array: ArrayInputs): Unknown;
 }
 
-interface Form extends CommonForm {
-  getValues(): Unknown;
-
-  onSubmit(event: Event): void;
-}
 type IPS = {
   i: ObjectInputs<string>;
   //touched
@@ -215,16 +214,10 @@ type InputStore = StoreType<IPS> & {
   n: Unknown[];
 };
 
-interface CompForm extends CommonForm {
-  getValues(): Unknown;
-
-  onSubmit(event: Event): void;
-}
-
 interface Computed {
   // store
   st: InputStore;
-  cp: CompForm;
+  f: Form;
   // useValues
   uv(): Unknown;
   // is valid
@@ -265,7 +258,7 @@ interface InputsHook {
   ): ObjStateOutput<CreateObjectInputs<I>>;
 }
 
-interface Inputs<I> extends CompForm {
+interface Inputs<I> extends Form {
   (): I extends string
     ? ObjStateOutput<CreateObjectInputs<I>>
     : I extends Array<Unknown>

@@ -1,15 +1,15 @@
 import {
   Computed,
+  EachCallback,
   type Input,
   InputConfig,
-  EachCallback,
   Unknown
 } from "../types";
 import { finalizeInputs, touchInput, transformToArray } from "../util";
 import { newSet, persist } from "../util/helper";
 import { extractValues } from "./handlers/values";
 
-export const createInputs = (initialState: Unknown, config: InputConfig) => {
+export const createForm = (initialState: Unknown, config: InputConfig) => {
   // pid => persistID to persist data on component unmount
   const pid = config.pid;
   if (pid && persist[pid]) {
@@ -60,7 +60,7 @@ export const createInputs = (initialState: Unknown, config: InputConfig) => {
   };
 
   const result: Computed = {
-    cp: {
+    f: {
       reset,
       getValues: () => extractValues(st.get("i")),
       each,
