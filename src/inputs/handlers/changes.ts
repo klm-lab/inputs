@@ -20,7 +20,8 @@ export const initValue = (
   getFile?: GetFile
 ) => {
   // Clone inputs
-  const input = store.get(`i.${objKey}`);
+  const entry = store.get("i");
+  const input = entry[objKey];
   if (type === FILE) {
     [value].flat().forEach((v: Unknown, index: number) => {
       input.files[index] = parseFile(objKey, store, v, !!getFile, {} as File);
@@ -35,21 +36,26 @@ export const initValue = (
     });
   } else if (type === RADIO) {
     // Check right radio input
-    setValue(input, input.value === value);
+    // setValue(input, input.value === value);
+    setCRValues(store, entry, input.name, (i) =>
+      setValue(i, i.value === value)
+    );
   } else if (type === CHECKBOX) {
-    // Toggle the checkbox input
-    const checked = value.length ? value.includes(input.value) : value;
-    setValue(input, checked);
-    if (checked && value.length) {
-      store.ev[input.name].s = newSet(value);
-    }
+    setCRValues(store, entry, input.name, (i) => {
+      const checked = value.push ? value.includes(i.value) : value;
+      // Toggle the checkbox input
+      setValue(i, checked);
+      if (checked && value.push) {
+        store.ev[i.name].s = newSet(value);
+      }
+    });
   } else {
     setValue(input, value, false);
   }
+  input.valid = true;
   // Sync handlers
   store.set((ref) => {
-    ref.i[objKey] = input;
-    ref.i[objKey].valid = true;
+    ref.i = entry;
   });
 };
 
