@@ -36,7 +36,7 @@ const validate = (
     //  if (!["asyncCustom", ...omr].includes(r)) {
     if (!omr.includes(r)) {
       const f = (rules as Unknown)[r];
-      em = r === "custom" ? f(va) : f(params);
+      em = va ? r === "custom" ? f(va) : f(params) : rules.required ? f(params) : "";
     }
   });
   // set the valid status
