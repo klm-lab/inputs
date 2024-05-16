@@ -12,6 +12,8 @@ export const persist = {} as { [k in string]: Computed };
 export const keys = Object.keys;
 export const RESERVED = newSet([
   "props",
+  "key",
+  "files",
   "label",
   "merge",
   "valid",
