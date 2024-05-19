@@ -80,7 +80,9 @@ export const parseFile = (
         input.valid = !em;
         input.errorMessage = em;
         // Validate form
-        ref.iv = validateState(ref.i);
+        const valid = validateState(ref.i);
+        ref.iv = valid.v;
+        ref.e = valid.e;
       });
     }
   } as ParsedFile;

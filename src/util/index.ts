@@ -210,7 +210,7 @@ const touchInput = (store: InputStore) => {
   const data = store.get("i");
   for (const key in data) {
     if (!data[key].valid) {
-      store.set((ref) =>
+      store.set((ref) => {
         setTouchedEm(
           ref.i,
           key,
@@ -221,8 +221,9 @@ const touchInput = (store: InputStore) => {
             //  (data[key] as Input & GetValue).g(data[key].value, true)
             (data[key] as Input & GetValue).g("", true)
           )
-        )
-      );
+        );
+        ref.e = key;
+      });
       break;
     }
   }

@@ -116,6 +116,8 @@ export const syncChanges = (store: InputStore, data: ObjectInputs<string>) => {
     // isTouched
     ref.t = true;
     // new valid state
-    ref.iv = validateState(data);
+    const valid = validateState(data);
+    ref.iv = valid.v;
+    ref.e = valid.e;
   });
 };

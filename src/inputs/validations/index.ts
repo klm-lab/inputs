@@ -54,14 +54,18 @@ const validate = (
 
 // Validate the state
 const validateState = (data: ObjectInputs<string>) => {
-  let valid = true;
+  // valid status
+  let v = true;
+  // erroneous key
+  let e = "";
   for (const formKey in data) {
-    if (!valid) {
+    v = data[formKey].valid;
+    if (!v) {
+      e = data[formKey].touched ? formKey : "";
       break;
     }
-    valid = data[formKey].valid;
   }
-  return valid;
+  return { v, e };
 };
 
 export { validate, validateState };

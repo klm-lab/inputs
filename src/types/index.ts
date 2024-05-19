@@ -167,6 +167,8 @@ interface Form {
 
   showError(): void;
 
+  getErroneousInput(): Input | undefined;
+
   get(name: string): Input[];
 
   getValues(): Unknown;
@@ -187,6 +189,8 @@ type IPS = {
   inv: boolean;
   // asyncDelay: number;
   c: InputConfig;
+  // Erroneous key
+  e: string;
 };
 type InputStore = StoreType<IPS> & {
   fc: GetFile;
