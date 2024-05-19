@@ -66,6 +66,7 @@ export const createForm = (initialState: Unknown, config: InputConfig) => {
       each,
       onSubmit,
       showError: () => touchInput(st),
+      getErroneousInput: () => st.get(`i.${st.get("e")}`),
       get: (name: string) => {
         const r: Input[] = [];
         st.ev[name].o.forEach((k) => {
