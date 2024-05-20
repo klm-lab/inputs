@@ -56,6 +56,8 @@ export const createForm = (initialState: Unknown, config: InputConfig) => {
       ref.iv = st.get("inv");
       // ref.t => inputs is touched
       ref.t = false;
+      // Reset erroneous key
+      ref.e = ''
     });
   };
 
